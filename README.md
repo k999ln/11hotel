@@ -1,142 +1,142 @@
 # 11hotel
 
-> ホテルの価値を見つけ、伝え、未来につなぐ。
+> Discover the value of hotels, tell their stories, and carry them forward.
 
-11hotel は、ホテル・リゾートの価値を「市場」と「編集」の両面から扱う事業です。現在は NOT A HOTEL の宿泊キー「THE KEY」のマーケットを中心に、宿泊したい人が公開出品を探し、購入を検討できる場を運営しています。中長期では映像・記事・写真の制作を通じてオーナーとの関係を築き、施設の承継・再生・運営、そして自社リゾートの開発へ進む構想です。
+11hotel is a hospitality business built around both a marketplace and editorial storytelling. Today, its main product helps people explore public listings for THE KEY, a stay key from NOT A HOTEL, and consider a purchase. Over time, 11hotel aims to build relationships with property owners through film, photography, and writing, then expand into property succession, revitalization, operations, and eventually its own resorts.
 
-このリポジトリは [11hotel.vip](https://11hotel.vip/) の現行ソースコードです。
+This repository contains the current source code for [11hotel.vip](https://11hotel.vip/).
 
-## 事業の全体像
+## Business overview
 
-| 領域 | 主な相手 | 提供する価値 | 収益・役割 | 現在地 |
+| Area | Primary audience | Value offered | Revenue or strategic role | Status |
 | --- | --- | --- | --- | --- |
-| **Market** | THE KEY の購入検討者・保有者 | 公開出品、宿泊日、拠点、取扱料込み価格の比較と購入サポート | 表示価格に含める取扱料。現在のサイトと収益検証の中心 | 現行サイトで提供 |
-| **Editorial** | 宿泊者、施設、地域の関係者 | ホテル、建築、食、人、土地の価値を映像・記事・写真で伝える | 読者と施設からの信頼を築く。広告・タイアップは表示を明確にして扱う | 中長期の事業構想 |
-| **Studio** | ホテル、旅館、ヴィラ、運営会社 | 施設の魅力を映像、写真、ブランドストーリーとして制作する | 制作・ブランディングの受託収益と施設との継続的な関係 | 事業設計中 |
-| **Properties** | 施設オーナー、運営会社、買い手候補、専門事業者 | 売却・承継・再生の相談を非公開で整理し、適切な専門家につなぐ | Property Film・資料制作・再生支援など。正式な媒介や契約は有資格の提携先が担う | 将来の展開 |
+| **Market** | Prospective buyers and holders of THE KEY | Compare public listings by stay date, location, and total price, with purchase support | Service fee included in the displayed total; the focus of the current site and revenue validation | Available on the current site |
+| **Editorial** | Travelers, properties, and local communities | Tell the stories of hotels, architecture, food, people, and places through film, articles, and photography | Build trust with readers and properties; clearly disclose advertising and sponsored work | Longer-term plan |
+| **Studio** | Hotels, ryokan, villas, and operators | Produce films, photographs, and brand stories that communicate a property's appeal | Production and branding fees, plus ongoing property relationships | In design |
+| **Properties** | Property owners, operators, prospective buyers, and specialists | Organize confidential conversations about sales, succession, and revitalization, then connect the right professionals | Property films, presentation materials, and revitalization support; licensed partners handle regulated brokerage and contracts | Future expansion |
 
-### Market：現在の事業の入口
+### Market: the current starting point
 
-公開されている THE KEY の出品を集め、宿泊日・拠点・価格を見比べられるようにします。11hotel が表示するのは取扱料を含む総額です。購入者は自分のウォレットで内容を確認して署名し、購入後は NOT A HOTEL の公式アプリで利用条件を確認して有効化します。ウォレットや NFT に不慣れな人には、購入前の相談から有効化まで人が対応する方針です。
+The site brings together public listings for THE KEY so visitors can compare stay dates, locations, and prices. 11hotel displays a total that includes its service fee. Buyers review and sign the transaction with their own wallets. After purchase, they check the terms and activate the key through NOT A HOTEL's official app. The intended support experience includes human help before purchase and through activation for people unfamiliar with wallets or NFTs.
 
-サイト内の購入フローでは、出品の取得、購入者へのキーの移転、11hotel の取扱料の支払いを同一のオンチェーン取引で処理します。いずれかが失敗した場合は取引全体が取り消される設計です。11hotel が代金やキーを継続して預かるモデルではありません。
+The on-site purchase flow is designed to purchase the listed key, transfer it to the buyer, and pay 11hotel's service fee in one on-chain transaction. If any part fails, the entire transaction reverts. 11hotel does not continuously hold the buyer's funds or key.
 
-### Editorial・Studio：施設の価値を伝える
+### Editorial and Studio: communicating a property's value
 
-Editorial では、建築・空間・食・人物・地域まで取材し、施設の背景と滞在する価値を伝えます。Studio ではその編集視点を、施設が Web・SNS・PR に使える制作物へ変えます。想定する制作商品は次のとおりです。
+Editorial covers architecture, spaces, food, people, and local culture to explain a property's background and the experience of staying there. Studio turns that editorial perspective into assets a property can use on the web, social media, and in public relations.
 
-| 商品 | 想定する制作物 |
+| Planned offering | Intended deliverables |
 | --- | --- |
-| **Hotel Essential** | 施設紹介映像、縦型動画、写真 |
-| **Hotel Signature** | ブランドフィルム、オーナー・経営者インタビュー、写真と SNS 素材 |
-| **Property Story** | 売却・承継を検討する施設の映像、写真、紹介記事、候補者向け資料 |
+| **Hotel Essential** | Property introduction film, vertical videos, and photographs |
+| **Hotel Signature** | Brand film, owner or executive interview, photographs, and social media assets |
+| **Property Story** | Film, photographs, article, and buyer-facing materials for a property considering sale or succession |
 
-これらは事業設計上の商品です。制作の申込機能とホテルの編集アーカイブは、今後の公開機能として扱います。
+These are planned offerings. Production inquiries and an editorial hotel archive are not yet features of the current site.
 
-### Properties：施設と土地を次へつなぐ
+### Properties: carrying places forward
 
-将来は、ホテル・旅館・ヴィラや用地について、オーナーからの相談を受け、建築・運営・地域との関係を含めて施設価値を整理します。公開の売買一覧ではなく、許可を得た情報を必要な相手に非公開で共有する方針です。媒介、重要事項説明、価格交渉、契約、法務・税務判断は提携する専門事業者が担います。
+In a future phase, 11hotel intends to work with owners of hotels, ryokan, villas, and potential development sites. It would document a property's value, including its architecture, operations, and relationship with the local area. The plan is to share owner-approved information privately with relevant parties rather than publish an open property sales board. Licensed partners would handle brokerage, required disclosures, price negotiations, contracts, and legal or tax advice.
 
-事業の展開は **Market で実際の需要と顧客接点をつくる → Editorial で理解と信頼を深める → Studio で施設との制作関係を築く → Properties で承継・再生を支える → 運営経験を蓄積し自社リゾートをつくる**、という順を想定しています。
+The intended progression is **Market** (learn from real demand and meet customers), followed by **Editorial** (build understanding and trust), **Studio** (develop working relationships with properties), and **Properties** (support succession and revitalization). Operating experience from these stages would inform the creation of 11hotel resorts.
 
-## 現行サイトでできること
+## What the current site does
 
-このリポジトリの実装は Market が中心です。Editorial・Studio・Properties は上記の事業方針であり、旧ホテル紹介ページや不動産相談機能は現在の公開版には含まれていません。
+The implementation in this repository is centered on Market. Editorial, Studio, and Properties describe the business direction. The earlier hotel editorial pages and property inquiry features are not part of the current public release.
 
-### 主な画面
+### Main routes
 
-| パス | 内容 |
+| Route | Purpose |
 | --- | --- |
-| `/` | 出品中の宿泊キー、拠点、参考価格を紹介するトップページ |
-| `/vip` | 出品の一覧・絞り込みができるマーケットボード |
-| `/stay/[tokenId]` | 宿泊キーごとの詳細と購入フロー |
-| `/vip/key/[tokenId]` | 特定の出品を開く共有用 URL（`/vip` に転送） |
-| `/vip/keys` | 接続したウォレットが保有するキーの確認 |
+| `/` | Homepage introducing listed stay keys, locations, and reference prices |
+| `/vip` | Market board with listing filters |
+| `/stay/[tokenId]` | Details and purchase flow for a stay key |
+| `/vip/key/[tokenId]` | Shareable listing URL that redirects to `/vip` |
+| `/vip/keys` | Keys held by a connected wallet |
 
-公開出品は OpenSea のデータをサーバー側で取得します。取得できない場合、トップページは拠点紹介を表示します。購入、管理画面、一部の API を利用するには、対応する外部サービスと環境変数の設定が必要です。
+The server fetches public listings from OpenSea. If they are unavailable, the homepage can still show its location overview. Purchases, administration, and some APIs require the relevant external services and environment variables.
 
-## 技術構成
+## Technology
 
-- Astro / TypeScript / Tailwind CSS
-- Cloudflare Workers（Web アプリと API Worker）
-- Supabase（データ保存）
-- OpenSea API（出品情報）
-- viem / WalletConnect（ウォレット接続と購入フロー）
+- Astro, TypeScript, and Tailwind CSS
+- Cloudflare Workers for the web app and notification API
+- Supabase for operational data
+- OpenSea API for listing and NFT data
+- viem and WalletConnect for wallet connectivity and the purchase flow
 
-## システム設計
+## System design
 
-11hotel は、公開ページと API を Astro のサーバーレンダリングアプリとして Cloudflare Workers 上で動かします。出品の最新情報は OpenSea、購入結果は Ethereum、相談・計測・運営記録は Supabase を参照します。運営者向けの AI 操作キューには Cloudflare KV を使い、通知用 Worker と Anthropic API は設定された場合にのみ利用します。
+11hotel runs its public pages and APIs as a server-rendered Astro application on Cloudflare Workers. OpenSea provides current listing data, Ethereum provides the authoritative purchase outcome, and Supabase stores inquiries, analytics, and operator records. Cloudflare KV holds the operator-facing AI command queue. The notification Worker and Anthropic API are used only when configured.
 
 ```mermaid
 flowchart LR
-    Visitor["閲覧者・購入者<br/>ブラウザとウォレット"]
-    Admin["運営者"]
+    Visitor["Visitor or buyer<br/>browser and wallet"]
+    Admin["Operator"]
     subgraph Cloudflare["Cloudflare Workers"]
-        App["Astro<br/>ページと API"]
-        KV["KV<br/>AI 操作キュー"]
-        Notify["通知 Worker"]
+        App["Astro<br/>pages and APIs"]
+        KV["KV<br/>AI command queue"]
+        Notify["Notification Worker"]
     end
-    OpenSea["OpenSea API<br/>出品・NFT 情報"]
-    DB[("Supabase Postgres<br/>相談・計測・在庫")]
-    AI["Anthropic API<br/>任意の分析・下書き"]
-    Slack["Slack<br/>任意の通知先"]
+    OpenSea["OpenSea API<br/>listing and NFT data"]
+    DB[("Supabase Postgres<br/>inquiries, analytics, inventory")]
+    AI["Anthropic API<br/>optional analysis and drafts"]
+    Slack["Slack<br/>optional notifications"]
     subgraph Ethereum["Ethereum mainnet"]
-        Checkout["11hotel Checkout<br/>+ Seaport"]
+        Checkout["11hotel Checkout<br/>and Seaport"]
     end
 
     Visitor --> App
     Admin --> App
-    App -->|出品取得・購入データ準備| OpenSea
-    App -->|サーバー側の記録| DB
-    App -->|操作状態| KV
-    App -->|任意| AI
-    App -->|任意| Notify --> Slack
-    App -->|取引結果の照会| Checkout
-    Visitor -->|本人が署名・送信| Checkout
+    App -->|fetch listings and prepare fulfillment| OpenSea
+    App -->|server-side records| DB
+    App -->|command state| KV
+    App -->|optional| AI
+    App -->|optional| Notify --> Slack
+    App -->|read transaction outcome| Checkout
+    Visitor -->|sign and submit| Checkout
 ```
 
-### 主な処理の流れ
+### Core flows
 
-| 処理 | 入力と処理 | 記録・結果 |
+| Flow | Input and processing | Record or result |
 | --- | --- | --- |
-| **出品表示** | `/api/vip/market` と `/api/stays/opensea` が OpenSea の出品・NFT 情報を取得し、画面用に整形する | 短時間キャッシュを使用。取得に失敗した場合は直近の正常データを返せる |
-| **購入** | `/api/vip/fulfill` が現行出品と決済条件を再検証し、コントラクト用の取引データを返す | 購入者のウォレットが署名・送信。`purchase-log` が送信を記録し、`purchase-status` がチェーン上の結果を確認する |
-| **購入相談** | `/api/stays/inquiry` が入力・同意を確認する | `stay_deals` に新規相談を保存し、設定済みなら運営者へ通知する |
-| **運営管理** | `/admin` と `/api/admin/*` が相談・在庫・シグナルを扱う | `stay_deals` と `stay_inventory` を更新する。運営者自身の売買は記録であり、顧客資産の預かりではない |
+| **Listing display** | `/api/vip/market` and `/api/stays/opensea` fetch and format OpenSea listings and NFT metadata | Short-lived caches; the last successful payload can be served if a refresh fails |
+| **Purchase** | `/api/vip/fulfill` rechecks the active listing and payment conditions, then returns checkout transaction data | The buyer's wallet signs and submits; `purchase-log` records submission and `purchase-status` checks the on-chain result |
+| **Purchase inquiry** | `/api/stays/inquiry` validates the request and consent | Creates a `stay_deals` record and optionally notifies the operator |
+| **Operations** | `/admin` and `/api/admin/*` handle inquiries, inventory, and market signals | Update `stay_deals` and `stay_inventory`; the inventory tracks the operator's own positions rather than customer assets |
 
-購入フローでは、出品の表示後に再度サーバー側で出品を検証します。送信後の `stay_deals` はまず `negotiating` として保存され、確認済みのオンチェーン結果に応じて `closed` または `lost` に進みます。ブラウザからの送信記録だけで購入確定にはしません。
+The server revalidates a listing after it has been displayed and before it prepares a purchase. A submitted transaction is first recorded in `stay_deals` as `negotiating`. It moves to `closed` or `lost` based on the verified on-chain outcome. A browser submission alone does not mark a purchase as complete.
 
 ```mermaid
 sequenceDiagram
-    participant B as 購入者のブラウザ
+    participant B as Buyer's browser
     participant A as 11hotel API
     participant O as OpenSea
-    participant W as 購入者のウォレット
+    participant W as Buyer's wallet
     participant E as Ethereum
     participant D as Supabase
 
     B->>A: POST /api/vip/fulfill (orderHash, wallet)
-    A->>O: 現行出品と fulfillment data を照会
-    O-->>A: 出品条件と Seaport 取引データ
-    A-->>B: 検証済み checkout calldata と総額
-    B->>W: 宛先・金額を確認して署名
-    W->>E: 取引を送信
-    E-->>B: transaction hash
+    A->>O: Check active listing and fulfillment data
+    O-->>A: Listing terms and Seaport transaction data
+    A-->>B: Verified checkout calldata and total
+    B->>W: Review destination and amount, then sign
+    W->>E: Submit transaction
+    E-->>B: Transaction hash
     B->>A: POST /api/vip/purchase-log
     A->>D: stay_deals (negotiating)
-    loop ブラウザ側で最大36回確認
+    loop Browser polls up to 36 times
         B->>A: POST /api/vip/purchase-status
-        A->>E: receipt と Purchased event を照合
-        opt 成功・失敗が確認できた場合
-            A->>D: stay_deals (closed または lost)
+        A->>E: Verify receipt and Purchased event
+        opt Success or failure is confirmed
+            A->>D: stay_deals (closed or lost)
         end
         A-->>B: pending / confirmed / failed
     end
 ```
 
-### データモデル（ER図）
+### Data model (ER diagram)
 
-この図は、このリポジトリのマイグレーションで定義する **THE KEY 関連の3テーブル** を示します。`OPEN_SEA_LISTING` は外部サービス上の概念であり、Supabase 内のテーブルではありません。点線は `token_id` や `order_hash` による論理的な対応で、データベースの外部キー制約ではありません。
+This diagram covers the **three THE KEY tables** defined by migrations in this repository. `OPEN_SEA_LISTING` is a concept in an external service, not a Supabase table. Dotted edges show logical matches through `token_id` or `order_hash`; they are not database foreign key constraints.
 
 ```mermaid
 erDiagram
@@ -178,20 +178,20 @@ erDiagram
     }
 ```
 
-- `stay_referral_clicks` は出品への流入計測、`stay_deals` は購入相談と購入の進捗、`stay_inventory` は運営者自身の仕入れ・出品・売却の記録です。同じ `token_id` に複数の記録があり得ます。
-- これらのテーブルは RLS を有効化し、公開クライアント用ポリシーを付けない設計です。読み書きはサーバー側の service role を使う API と管理画面を経由します。`stay_deals` には連絡先が含まれるため、公開 API の応答に行全体を返しません。
-- 管理ログ用の `admin_audit_logs` もコードから参照しますが、そのテーブル定義はこのリポジトリのマイグレーションに含まれていないため、図には含めていません。`202607300001_drop_legacy_editorial_hospitality.sql` は旧 Editorial / Hospitality テーブルの削除を定義します。図はソース上の目標モデルであり、本番環境への適用状態を保証するものではありません。
+- `stay_referral_clicks` records listing referral activity; `stay_deals` tracks inquiries and purchase progress; `stay_inventory` records purchases, listings, and sales made by the operator. Multiple records may refer to the same `token_id`.
+- The migrations enable row-level security (RLS) on these tables without adding public-client policies. Reads and writes go through server-side APIs and admin pages using the service role. Because `stay_deals` contains contact information, public API responses do not return entire rows.
+- The code also references `admin_audit_logs`, but its table definition is not included in this repository's migrations, so it is omitted from the diagram. `202607300001_drop_legacy_editorial_hospitality.sql` defines removal of older Editorial and Hospitality tables. The diagram describes the source-controlled target model; it does not prove which migrations have been applied in production.
 
-### 権限と運用の境界
+### Access and operating boundaries
 
-- 公開の一覧 API は出品を読み取り、購入 API は入力・現行出品・コントラクト宛先と金額を検証します。購入の署名と送信は購入者のウォレットで行います。
-- 管理 API は管理トークンの Cookie を確認し、状態を変えるリクエストでは `Origin` / `Referer` を検証します。AI ブリッジは別の Bearer トークンで保護します。
-- `SUPABASE_SERVICE_ROLE_KEY`、`OPENSEA_API_KEY`、管理トークンなどはサーバー側の設定として扱います。`.env.example` は入力例です。本番のシークレットを Git に追加しないでください。
-- Cloudflare へのデプロイと Supabase のマイグレーション適用は別の作業です。マイグレーションファイルが存在しても、本番データベースに反映済みとは限りません。
+- Public listing APIs read listings. The purchase API validates input, the active listing, the contract destination, and amounts. The buyer signs and submits the transaction from their own wallet.
+- Admin APIs check an admin-token cookie and validate `Origin` or `Referer` on state-changing requests. The AI bridge uses a separate bearer token.
+- `SUPABASE_SERVICE_ROLE_KEY`, `OPENSEA_API_KEY`, admin tokens, and similar credentials belong in server-side configuration. `.env.example` contains examples. Do not commit production secrets.
+- Deploying to Cloudflare and applying Supabase migrations are separate operations. A migration file in this repository does not mean it has been applied to the production database.
 
-## ローカルで起動
+## Run locally
 
-Node.js と npm を用意し、リポジトリのルートで実行します。
+Install Node.js and npm, then run the following commands from the repository root:
 
 ```sh
 npm ci
@@ -199,32 +199,32 @@ cp .env.example .env
 npm run dev
 ```
 
-`.env.example` を参考に、使う機能に必要な値を `.env` に設定してください。`.env` は Git の対象外です。公開出品の取得には `OPENSEA_API_KEY` が必要です。キーがない状態でも、トップページの拠点紹介は表示できます。
+Use `.env.example` to set the values needed by the features you want to run. `.env` is ignored by Git. `OPENSEA_API_KEY` is required to fetch public listings; without it, the homepage can still display its location overview.
 
-| 設定 | 用途 |
+| Variable | Purpose |
 | --- | --- |
-| `OPENSEA_API_KEY` | THE KEY の公開出品を取得 |
-| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | サーバー側のデータ処理と管理機能 |
-| `KEY_CHECKOUT_CONTRACT` / `KEY_COLLECTION_CONTRACT` | 購入フローで参照するコントラクト |
-| `KEY_SUPPORT_FEE_BPS` / `KEY_NIGHTLY_FLOOR_ETH` | 取扱料と最低販売価格の設定 |
-| `PUBLIC_WALLETCONNECT_PROJECT_ID` | モバイルなどでのウォレット接続 |
-| `ADMIN_TOKEN` / `ADMIN_SECRET` | 管理機能の認証 |
+| `OPENSEA_API_KEY` | Fetch public THE KEY listings |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Server-side data processing and admin features |
+| `KEY_CHECKOUT_CONTRACT` / `KEY_COLLECTION_CONTRACT` | Contracts used by the purchase flow |
+| `KEY_SUPPORT_FEE_BPS` / `KEY_NIGHTLY_FLOOR_ETH` | Service-fee and minimum-price configuration |
+| `PUBLIC_WALLETCONNECT_PROJECT_ID` | Wallet connections, including mobile |
+| `ADMIN_TOKEN` / `ADMIN_SECRET` | Admin authentication |
 
-`PUBLIC_` が付く値はブラウザから参照できます。それ以外の認証情報はサーバー側で扱い、リポジトリに追加しないでください。
+Variables prefixed with `PUBLIC_` are available to browser code. Keep all other credentials on the server and out of the repository.
 
-## 開発コマンド
+## Development commands
 
 ```sh
-npm run dev            # 開発サーバー
-npm run build          # 本番用ビルド
-npm run test:checkout  # 購入フローのテスト
-npm run test:security  # 公開 API のセキュリティテスト
+npm run dev            # Start the development server
+npm run build          # Build for production
+npm run test:checkout  # Test the purchase flow
+npm run test:security  # Test public API security checks
 ```
 
-主なコードは `src/`、公開アセットは `public/`、決済コントラクトは `contracts/`、データベースのマイグレーションは `supabase/migrations/` にあります。Cloudflare の設定は `astro.config.mjs`、`wrangler.toml`、`worker/` を参照してください。
+Application code is in `src/`, public assets in `public/`, checkout contracts in `contracts/`, and database migrations in `supabase/migrations/`. See `astro.config.mjs`, `wrangler.toml`, and `worker/` for Cloudflare configuration.
 
-## 運用上の境界
+## Operating principles
 
-- THE KEY は宿泊のためのキーとして扱い、値上がりや転売益を訴求しません。出品価格や参考価格は投資助言ではなく、在庫・価格・宿泊条件を保証するものでもありません。
-- 11hotel は宿泊予約の確定や、許可を要する不動産の媒介・契約業務を行いません。購入前には NOT A HOTEL の公式案内と利用条件を確認してください。
-- AI は調査・分類・要約・下書きの補助に使います。外部への送信、公開、価格や契約に関わる判断は人が確認します。
+- THE KEY is treated as a key for stays. 11hotel does not promote price appreciation or resale gains. Listing and reference prices are not investment advice, and availability, pricing, or stay conditions are not guaranteed.
+- 11hotel does not confirm lodging reservations or perform regulated real-estate brokerage and contract services. Review NOT A HOTEL's official guidance and terms before purchasing.
+- AI helps with research, classification, summaries, and drafts. A person reviews external messages, publication, and decisions involving prices or contracts.
