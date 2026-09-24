@@ -1,0 +1,84 @@
+---
+// FEATURED の1枚。写真が主役。情報はキッカー・名前・価格行・一行コピーのみ。
+// 価格は取扱料込みの総額をそのまま出し、セール的な強調はしない。
+interface Props {
+  href: string;
+  name: string;
+  kicker: string;         // 例: 'AOSHIMA, JAPAN · NOT A HOTEL'
+  copy: string | null;    // 一行コピー（チェックイン日・泊数など）
+  price: string | null;   // 例: '0.2756 ETH · 取扱料込み'（データなしなら非表示）
+  image: string | null;
+  ratio: string;          // '4 / 5' | '16 / 10' | '21 / 9'
+  span: string;           // grid-column 値
+}
+const { href, name, kicker, copy, price, image, ratio, span } = Astro.props;
+---
+
+<a class="gxc gx-reveal" href={href} style={`--ratio:${ratio}; --span:${span};`}>
+  <span class="gxc-media">
+    {image
+      ? <img src={image} alt={name} loading="lazy" decoding="async" />
+      : <span class="gxc-ph" aria-hidden="true"></span>}
+    <span class="gxc-veil" aria-hidden="true"></span>
+  </span>
+  <span class="gxc-body">
+    <span class="gxc-top">
+      <em>{kicker}</em>
+      <strong>{name}</strong>
+      {copy && <span class="gxc-copy">{copy}</span>}
+      {price && <span class="gxc-price">{price}</span>}
+    </span>
+    <span class="gxc-arrow" aria-hidden="true">→</span>
+  </span>
+</a>
+
+<style>
+  .gxc {
+    grid-column: var(--span);
+    display: block; position: relative; text-decoration: none;
+    border-radius: 10px; overflow: hidden; background: #111;
+  }
+  .gxc-media { position: absolute; inset: 0; display: block; }
+  .gxc-media img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform .8s cubic-bezier(.22, 1, .36, 1);
+  }
+  .gxc:hover .gxc-media img, .gxc:focus-visible .gxc-media img { transform: scale(1.03); }
+  .gxc-ph { position: absolute; inset: 0; background: #141414; }
+  .gxc-veil {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(8,8,8,.72), rgba(8,8,8,.06) 52%);
+    transition: background .8s ease;
+  }
+  .gxc:hover .gxc-veil { background: linear-gradient(to top, rgba(8,8,8,.78), rgba(8,8,8,.18) 52%); }
+
+  .gxc-body {
+    position: relative; z-index: 1; aspect-ratio: var(--ratio);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+    padding: clamp(18px, 2.4vw, 30px);
+  }
+  .gxc-top { display: grid; gap: 8px; min-width: 0; }
+  .gxc-top em {
+    font-style: normal; font-family: var(--gx-en);
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--gx-sub);
+  }
+  .gxc-top strong {
+    font-family: var(--gx-en); font-weight: 700; text-transform: uppercase;
+    font-size: clamp(22px, 2.6vw, 40px); line-height: 1.05; letter-spacing: .01em; color: var(--gx-txt);
+  }
+  .gxc-copy {
+    font-size: 12.5px; line-height: 1.9; color: var(--gx-sub);
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .gxc-price { font-family: var(--gx-en); font-size: 13px; letter-spacing: .06em; color: var(--gx-txt); }
+  .gxc-arrow {
+    flex-shrink: 0; color: var(--gx-txt); font-size: 18px;
+    transition: transform .8s cubic-bezier(.22, 1, .36, 1);
+  }
+  .gxc:hover .gxc-arrow, .gxc:focus-visible .gxc-arrow { transform: translateX(6px); }
+
+  @media (max-width: 860px) {
+    .gxc { grid-column: 1 / -1 !important; }
+    .gxc-body { aspect-ratio: 4 / 5; }
+  }
+</style>

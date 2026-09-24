@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /private/
+Disallow: /collections/
+Disallow: /vip/keys
+Disallow: /vip/request-access
+Disallow: /en/vip/keys
+
+Sitemap: https://11hotel.vip/sitemap-index.xml

@@ -1,0 +1,166 @@
+---
+// ファーストビュー: 3〜5件のホテルをクロスフェード + ごく緩やかなズームで切り替える。
+// 自動切替7秒。ユーザー操作（矢印）で自動切替は停止。prefers-reduced-motion ではズームなし。
+export type HeroSlide = {
+  href: string;
+  name: string;
+  areaLabel: string;
+  image: string | null;
+  copy: string | null;
+};
+interface Props { slides: HeroSlide[]; ctaLabel?: string }
+const { slides, ctaLabel = 'View hotel' } = Astro.props;
+const pad = (n: number) => String(n + 1).padStart(2, '0');
+---
+
+<section class="gxhero" id="top">
+  <div class="gxhero-media">
+    {slides.map((s, i) => (
+      <div
+        class:list={['gxhero-slide', i === 0 && 'is-active']}
+        data-name={s.name}
+        data-area={s.areaLabel}
+        data-copy={s.copy ?? ''}
+        data-href={s.href}
+      >
+        {s.image && (
+          <img
+            src={s.image}
+            alt={s.name}
+            loading={i === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            fetchpriority={i === 0 ? 'high' : 'auto'}
+          />
+        )}
+      </div>
+    ))}
+    <div class="gxhero-shade" aria-hidden="true"></div>
+  </div>
+
+  <div class="gxhero-body">
+    <p class="gx-label">11HOTEL SELECTION</p>
+    <h1 class="gxhero-name" id="gxHeroName">{slides[0]?.name}</h1>
+    <p class="gxhero-meta"><span id="gxHeroArea">{slides[0]?.areaLabel}</span>, JAPAN — DESIGNED FOR A NEW WAY OF STAYING</p>
+    <p class="gxhero-copy" id="gxHeroCopy">{slides[0]?.copy}</p>
+    <div class="gxhero-ctas">
+      <a class="gx-pill" id="gxHeroLink" href={slides[0]?.href ?? '/vip'}>{ctaLabel}</a>
+      <a class="gx-pill gx-pill--ghost" href="#about">About 11hotel</a>
+    </div>
+  </div>
+
+  <div class="gxhero-foot">
+    <span class="gxhero-foot-name" id="gxHeroFootName">{slides[0]?.name}</span>
+    <span class="gxhero-nav">
+      <button type="button" id="gxHeroPrev" aria-label="Show previous hotel">←</button>
+      <span class="gxhero-count"><b id="gxHeroIdx">01</b>&nbsp;/&nbsp;{pad(slides.length - 1)}</span>
+      <button type="button" id="gxHeroNext" aria-label="Show next hotel">→</button>
+    </span>
+  </div>
+</section>
+
+<script>
+  const init = () => {
+    const root = document.querySelector<HTMLElement>('.gxhero');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+
+    const slides = Array.from(root.querySelectorAll<HTMLElement>('.gxhero-slide'));
+    if (slides.length <= 1) return;
+    const $ = (id: string) => document.getElementById(id);
+    let idx = 0;
+    let timer: number | null = null;
+
+    const show = (next: number) => {
+      idx = (next + slides.length) % slides.length;
+      slides.forEach((s, i) => s.classList.toggle('is-active', i === idx));
+      const s = slides[idx];
+      const name = s.dataset.name ?? '';
+      $('gxHeroName')!.textContent = name;
+      $('gxHeroArea')!.textContent = s.dataset.area ?? '';
+      $('gxHeroCopy')!.textContent = s.dataset.copy ?? '';
+      $('gxHeroFootName')!.textContent = name;
+      ($('gxHeroLink') as HTMLAnchorElement).href = s.dataset.href ?? '/vip';
+      $('gxHeroIdx')!.textContent = String(idx + 1).padStart(2, '0');
+    };
+
+    const stop = () => { if (timer != null) { clearInterval(timer); timer = null; } };
+    const start = () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      timer = window.setInterval(() => show(idx + 1), 7000);
+    };
+
+    // ユーザー操作後は自動切替を停止する
+    $('gxHeroPrev')?.addEventListener('click', () => { stop(); show(idx - 1); });
+    $('gxHeroNext')?.addEventListener('click', () => { stop(); show(idx + 1); });
+    start();
+    document.addEventListener('astro:before-swap', stop, { once: true });
+  };
+  init();
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .gxhero { position: relative; height: 100svh; min-height: 560px; overflow: hidden; background: #080808; }
+  .gxhero-media, .gxhero-slide { position: absolute; inset: 0; }
+  .gxhero-slide { opacity: 0; transition: opacity 1.4s ease; }
+  .gxhero-slide.is-active { opacity: 1; }
+  .gxhero-slide img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transform: scale(1);
+  }
+  .gxhero-slide.is-active img { animation: gx-hero-zoom 8s ease-out forwards; }
+  @keyframes gx-hero-zoom { from { transform: scale(1); } to { transform: scale(1.05); } }
+  @media (prefers-reduced-motion: reduce) {
+    .gxhero-slide { transition: none; }
+    .gxhero-slide.is-active img { animation: none; }
+  }
+  .gxhero-shade {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(to bottom, rgba(8,8,8,.5), rgba(8,8,8,0) 30%),
+      linear-gradient(to top, rgba(8,8,8,.78), rgba(8,8,8,0) 55%),
+      linear-gradient(to right, rgba(8,8,8,.42), rgba(8,8,8,0) 55%);
+  }
+
+  .gxhero-body {
+    position: absolute; left: 0; right: 0; bottom: clamp(88px, 14vh, 150px); z-index: 2;
+    max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 3.4vw, 48px);
+  }
+  .gxhero-name {
+    font-family: var(--gx-en); font-weight: 700;
+    font-size: clamp(36px, 5.2vw, 84px); line-height: 1.14; letter-spacing: .01em;
+    text-transform: uppercase; color: var(--gx-txt); margin: 14px 0 16px; max-width: 18ch;
+    text-wrap: balance;
+  }
+  .gxhero-meta {
+    font-family: var(--gx-en); font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--gx-sub); margin: 0 0 14px;
+  }
+  .gxhero-copy { font-size: 15px; line-height: 2; color: var(--gx-txt); margin: 0 0 28px; max-width: 44ch; }
+  .gxhero-ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  .gxhero-foot {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 3.4vw, 48px) 22px;
+    display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  }
+  .gxhero-foot-name {
+    font-family: var(--gx-en); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--gx-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .gxhero-nav { display: inline-flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .gxhero-nav button {
+    background: transparent; border: 1px solid var(--gx-line); border-radius: 999px;
+    color: var(--gx-txt); width: 44px; height: 44px; cursor: pointer; font-size: 15px;
+    transition: border-color .3s, background .3s;
+  }
+  .gxhero-nav button:hover, .gxhero-nav button:focus-visible { border-color: rgba(255,255,255,.55); background: rgba(255,255,255,.06); }
+  .gxhero-count { font-family: var(--gx-en); font-size: 12px; letter-spacing: .14em; color: var(--gx-sub); font-variant-numeric: tabular-nums; }
+  .gxhero-count b { color: var(--gx-txt); font-weight: 600; }
+
+  @media (max-width: 860px) {
+    .gxhero-name { font-size: clamp(30px, 9vw, 44px); }
+    .gxhero-body { bottom: 96px; }
+    .gxhero-copy { font-size: 14px; margin-bottom: 22px; }
+  }
+</style>

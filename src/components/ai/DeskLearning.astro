@@ -1,0 +1,91 @@
+---
+/** Quant Control · learning-section */
+---
+<section id="learning-section" class="view section" data-view="learning-section" hidden>
+      <div class="section-title">
+        <div>
+          <p class="section-kicker">INTELLIGENCE</p>
+          <h2>AI・再学習・運用フィードバック</h2>
+        </div>
+      </div>
+
+      <section id="kai-panel" class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">KAI OPS</p>
+            <h3>kai[解] GPU Learning</h3>
+            <p class="muted">Python AI → JavaScript control → SQL memory</p>
+          </div>
+          <span id="kai-badge" class="mini-badge">—</span>
+        </div>
+        <div id="kai-metrics" class="metric-grid"></div>
+        <pre id="kai-model" class="probe mono"></pre>
+        <div class="kai-control-grid">
+          <div>
+            <h4>学習・昇格</h4>
+            <div class="actions">
+              <button id="btn-kai-train" type="button">同意済みrunで候補学習</button>
+              <button id="btn-kai-promote" type="button" class="primary">候補を人間昇格</button>
+            </div>
+            <label class="kai-field">
+              <span>承認者</span>
+              <input id="kai-approved-by" value="kaiya" maxlength="120" />
+            </label>
+          </div>
+          <form id="kai-predict-form">
+            <h4>OOM事前予測</h4>
+            <div class="kai-form-grid">
+              <label class="kai-field"><span>GPU VRAM (MB)</span><input id="kai-gpu-memory" type="number" min="1" value="24576" required /></label>
+              <label class="kai-field"><span>要求VRAM (MB)</span><input id="kai-requested-memory" type="number" min="0" value="18000" required /></label>
+              <label class="kai-field"><span>Batch size</span><input id="kai-batch-size" type="number" min="1" value="8" required /></label>
+              <label class="kai-field"><span>Sequence length</span><input id="kai-sequence-length" type="number" min="1" value="4096" required /></label>
+              <label class="kai-field"><span>Parameters (B)</span><input id="kai-parameters" type="number" min="0" step="0.1" value="7" required /></label>
+              <label class="kai-field"><span>GPU count</span><input id="kai-gpu-count" type="number" min="1" value="1" required /></label>
+              <label class="kai-field"><span>Precision</span><select id="kai-precision"><option>bf16</option><option>fp16</option><option>fp32</option><option>int8</option><option>other</option></select></label>
+            </div>
+            <button id="btn-kai-predict" type="submit" class="primary">OOMリスクを予測</button>
+          </form>
+        </div>
+        <p id="kai-action-msg" class="action-msg" role="status"></p>
+      </section>
+
+      <div class="grid-2">
+        <section class="panel">
+          <div class="panel-head"><h3>モデル状態</h3></div>
+          <div id="models" class="model-list"></div>
+          <div id="probe" class="probe mono"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h3>最新の再学習評価</h3></div>
+          <div id="retrain" class="metrics"></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>運用学習の反映差分</h3>
+            <p class="muted">約定台帳からコスト・無駄打ちを学び、次回起動時の安全設定へ反映</p>
+          </div>
+          <span id="learn-badge" class="mini-badge">—</span>
+        </div>
+        <div id="learning"></div>
+      </section>
+
+      <div class="grid-2">
+        <section class="panel">
+          <div class="panel-head"><h3>medallion 診断サンプル</h3></div>
+          <pre id="explain" class="explain mono">診断未実行</pre>
+          <div class="table-wrap">
+            <table id="diag-table">
+              <thead><tr><th>時刻</th><th>AI P(up)</th><th>E[r]</th><th>score</th><th>entry</th><th>regime</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h3>再学習履歴</h3></div>
+          <div id="history" class="history"></div>
+        </section>
+      </div>
+    </section>

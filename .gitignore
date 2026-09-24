@@ -1,0 +1,15 @@
+.env*
+!.env.example
+*.pem
+*.p12
+*.p8
+credentials*.json
+.wrangler/
+.astro/
+dist/
+node_modules/
+supabase/.temp/
+worker/node_modules/
+.DS_Store
+._*
+.claude/settings.local.json

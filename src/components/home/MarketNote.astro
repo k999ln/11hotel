@@ -1,0 +1,70 @@
+---
+// MARKET NOTE: 長い黒背景の中の変化として、このセクションのみオフホワイト背景にする（元STORIES枠を差し替え）。
+// 表示する数字は実データ（出品中のTHE KEY価格。11hotel取扱料込み）のみ。将来価値・値上がりの含意は書かない。
+interface Props {
+  count: number;
+  floorEth: string | null;
+  medianEth: string | null;
+  image: string | null;
+}
+const { count, floorEth, medianEth, image } = Astro.props;
+---
+
+<section class="gxmn" id="market-note">
+  <div class="gxmn-in">
+    <div class="gxmn-media">
+      {image
+        ? <img src={image} alt="" loading="lazy" decoding="async" />
+        : <span class="gxmn-ph" aria-hidden="true"></span>}
+    </div>
+    <div class="gxmn-body">
+      <p class="gx-label gxmn-label">MARKET NOTE</p>
+      <h2>What it costs right now.</h2>
+      <dl class="gxmn-stats">
+        <div>
+          <dt>Listed now</dt>
+          <dd>{count}</dd>
+        </div>
+        <div>
+          <dt>Lowest price (incl. handling)</dt>
+          <dd>{floorEth ? `${floorEth} ETH` : '—'}</dd>
+        </div>
+        <div>
+          <dt>Median listing price (incl. handling)</dt>
+          <dd>{medianEth ? `${medianEth} ETH` : '—'}</dd>
+        </div>
+      </dl>
+      <p class="gxmn-note">
+        These figures are a guide to current public listing prices only — not past sales or future prices.
+        This is not investment advice or a recommendation to buy or sell; price, liquidity, and the validity of the stay right are not guaranteed.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gxmn { background: var(--gx-paper); color: #14140f; }
+  .gxmn-in {
+    max-width: 1200px; margin: 0 auto;
+    padding: clamp(70px, 12vh, 160px) clamp(20px, 3.4vw, 48px);
+    display: grid; gap: clamp(28px, 4vw, 56px); align-items: center;
+  }
+  @media (min-width: 860px) { .gxmn-in { grid-template-columns: 1.05fr .95fr; } }
+  .gxmn-media { aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; background: #dfded9; }
+  .gxmn-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gxmn-ph { display: block; width: 100%; height: 100%; background: #dfded9; }
+
+  .gxmn-label { color: rgba(20,20,15,.5); }
+  .gxmn-body h2 { font-weight: 700; font-size: clamp(26px, 3.4vw, 44px); margin: 14px 0 26px; color: #14140f; }
+
+  .gxmn-stats { margin: 0 0 24px; }
+  .gxmn-stats div {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+    border-top: 1px solid rgba(20,20,15,.14); padding: 14px 2px;
+  }
+  .gxmn-stats div:last-child { border-bottom: 1px solid rgba(20,20,15,.14); }
+  .gxmn-stats dt { font-size: 12px; letter-spacing: .06em; color: rgba(20,20,15,.6); }
+  .gxmn-stats dd { margin: 0; font-family: var(--gx-en); font-size: 17px; font-weight: 700; color: #14140f; }
+
+  .gxmn-note { font-size: 11.5px; line-height: 2; color: rgba(20,20,15,.55); margin: 0; max-width: 60ch; }
+</style>

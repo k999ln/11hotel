@@ -1,0 +1,44 @@
+---
+// NEWS: カードではなく1行リスト。日付 | タイトル | 矢印。
+// 現状は「新規掲載ホテル」を自動でニュース化している（専用のニュースデータ導入までの暫定）。
+export type NewsItem = { date: string; title: string; href: string };
+interface Props { items: NewsItem[] }
+const { items } = Astro.props;
+---
+
+<section class="gxn" id="news">
+  <div class="gxn-in">
+    <p class="gx-label gx-reveal">NEWS</p>
+    <ul>
+      {items.map((n) => (
+        <li class="gx-reveal">
+          <a href={n.href}>
+            <time datetime={n.date.replaceAll('.', '-')}>{n.date}</time>
+            <span>{n.title}</span>
+            <i aria-hidden="true">→</i>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .gxn-in { max-width: 1200px; margin: 0 auto; padding: clamp(70px, 11vh, 140px) clamp(20px, 3.4vw, 48px); }
+  .gxn ul { list-style: none; margin: 26px 0 0; padding: 0; }
+  .gxn li { border-top: 1px solid var(--gx-line); }
+  .gxn li:last-child { border-bottom: 1px solid var(--gx-line); }
+  .gxn a {
+    display: grid; grid-template-columns: 110px 1fr auto; gap: 18px; align-items: center;
+    padding: 20px 10px; text-decoration: none; transition: background .3s;
+  }
+  .gxn a:hover, .gxn a:focus-visible { background: rgba(255,255,255,.04); }
+  .gxn time { font-family: var(--gx-en); font-size: 12px; letter-spacing: .1em; color: var(--gx-sub); font-variant-numeric: tabular-nums; }
+  .gxn span { font-size: 14px; color: var(--gx-txt); line-height: 1.8; }
+  .gxn i { font-style: normal; color: var(--gx-sub); transition: transform .3s ease; }
+  .gxn a:hover i, .gxn a:focus-visible i { transform: translateX(4px); }
+  @media (max-width: 640px) {
+    .gxn a { grid-template-columns: 1fr auto; }
+    .gxn time { grid-column: 1 / -1; }
+  }
+</style>

@@ -1,0 +1,34 @@
+---
+/** Quant Control · header */
+---
+<header class="top desk-top">
+    <div class="brand">
+      <p class="eyebrow">QUANT</p>
+      <h1>Desk</h1>
+    </div>
+    <div class="top-meta desk-top-meta">
+      <div id="system-pill" class="pill unknown">CHECKING</div>
+      <span id="run-chip" class="run-chip stopped">STOPPED</span>
+      <p id="header-broker" class="header-broker">接続先…</p>
+      <p id="clock" class="mono muted">—</p>
+      <a id="link-admin" class="desk-ghost" href="/admin/quant" hidden>管理・詳細</a>
+      <a id="link-desk" class="desk-ghost" href="/ai" hidden>運用デスク</a>
+      <button type="button" id="btn-cmd" class="desk-ghost" title="詳細・研究 (⌘K)">詳細</button>
+    </div>
+    <dialog id="cmd-palette" class="cmd-palette" aria-label="コマンドパレット">
+      <div class="cmd-shell">
+        <input id="cmd-input" class="cmd-input" type="search" placeholder="移動・操作を検索…" autocomplete="off" />
+        <ul id="cmd-list" class="cmd-list" role="listbox">
+          <li role="option" data-cmd="view:trade" tabindex="-1" data-cmd-scope="full">トレードデスク</li>
+          <li role="option" data-cmd="drawer:more" tabindex="-1" data-cmd-scope="full">接続・台帳・学習操作</li>
+          <li role="option" data-cmd="view:overview" tabindex="-1" data-cmd-scope="admin">全体状態</li>
+          <li role="option" data-cmd="view:operations" tabindex="-1" data-cmd-scope="admin">台帳・リスク</li>
+          <li role="option" data-cmd="view:learning-section" tabindex="-1" data-cmd-scope="admin">AI・学習</li>
+          <li role="option" data-cmd="view:architecture" tabindex="-1" data-cmd-scope="admin">設計・限界</li>
+          <li role="option" data-cmd="nav:admin" tabindex="-1" data-cmd-scope="ops">管理画面へ</li>
+          <li role="option" data-cmd="nav:desk" tabindex="-1" data-cmd-scope="admin">運用デスクへ</li>
+        </ul>
+        <p class="cmd-hint muted mono">Enter で実行 · Esc で閉じる</p>
+      </div>
+    </dialog>
+  </header>

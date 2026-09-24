@@ -1,0 +1,14 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import KeyMarketBoard from '@/components/KeyMarketBoard.astro';
+
+// /vip = THE KEY マーケットボード（公開）。
+// 旧 Hospitality Collection ページは docs/_archive/vip.astro.bak-* に退避（2026-07-04）。
+---
+
+<BaseLayout
+  title="THE KEY Market Board — NOT A HOTEL stay key prices"
+  description="Live listings for NOT A HOTEL's THE KEY stay vouchers with market reference prices. Compare, ask 11hotel, or buy directly from your wallet."
+>
+  <KeyMarketBoard lang="en" />
+</BaseLayout>

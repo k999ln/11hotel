@@ -1,0 +1,24 @@
+---
+// INTRO: 黒背景に大きな文章のみ。スクロールで1行ずつフェードアップ（.gx-reveal は index の共通実装）。
+---
+
+<section class="gxi">
+  <p class="gxi-en gx-reveal">“A night at NOT A HOTEL,<br />one KEY away.”</p>
+  <p class="gxi-ja gx-reveal" data-reveal-delay="120">
+    The night you want, from a single KEY.<br />We organize listings and reference prices, and show only the total including handling.
+  </p>
+</section>
+
+<style>
+  .gxi {
+    max-width: 1200px; margin: 0 auto;
+    padding: clamp(160px, 22vh, 240px) clamp(20px, 3.4vw, 48px);
+    text-align: left;
+  }
+  .gxi-en {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; font-style: italic;
+    font-size: clamp(38px, 5vw, 80px); line-height: 1.14; letter-spacing: 0;
+    color: var(--gx-txt); margin: 0 0 34px;
+  }
+  .gxi-ja { font-size: clamp(15px, 1.6vw, 18px); line-height: 2.4; color: var(--gx-sub); margin: 0; }
+</style>

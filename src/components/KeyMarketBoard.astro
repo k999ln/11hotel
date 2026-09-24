@@ -1,0 +1,841 @@
+---
+// THE KEY 公開マーケットボード。
+// - データ: /api/vip/market（公開・エッジ20秒キャッシュ）を約20秒ごとにポーリング
+// - 購入: 署名前に確認ダイアログ（券・宿泊日・総額・送信先コントラクト）→ 買い手自身のウォレットで
+//   Seaport を直接約定。直接購入は出品価格そのまま。11hotel購入サポートは成約手数料を別建て表示。
+// - ロゴは BaseLayout のヘッダーが持つため、このコンポーネントでは出さない（二重表示防止）。
+import { t, type Lang } from '@/lib/i18n';
+import { listNotAHotelProfiles } from '@/lib/notahotel-houses';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const lineup = listNotAHotelProfiles();
+
+const dict = {
+  ja: {
+    eyebrow: '11HOTEL MARKET — NOT A HOTEL THE KEY',
+    sub: '公開出品を比較し、そのまま購入。迷う場合は11hotelが選定から購入まで伴走します。',
+    feeKicker: 'ONE-STEP CHECKOUT',
+    feeTitle: '購入・受け取り・11hotel取扱料を、1回の署名で。',
+    feeBody: '表示価格には11hotel取扱料が含まれます。決済と宿泊券の受け取りは同時に完了し、途中で失敗した場合は全体が取り消されます。',
+    retry: '再読み込み',
+    switchLabel: 'EN',
+    live: 'LIVE',
+    floor: 'フロア',
+    median: '直近成約(中央値)',
+    listings: '出品中',
+    empty: 'この条件の宿泊券は、いま出ていません。条件を変えるか、少し時間をおいてご覧ください。',
+    error: '出品情報を取得できませんでした。少し待って再読み込みしてください。',
+    keysLink: 'MY KEYS →',
+    ctlPlace: '場所',
+    ctlMonth: 'チェックイン月',
+    ctlSort: '並び順',
+    ctlAllPlaces: 'すべての場所',
+    ctlAllMonths: 'すべての月',
+    sortPrice: '価格が安い順',
+    sortDate: 'チェックインが近い順',
+    guideTitle: '購入の流れと注意',
+    guideSteps: [
+      ['内容を確認して署名', '11hotel販売価格を確認し、ご自身のウォレットで一度だけ署名します。'],
+      ['NFTがウォレットに届く', '通常は数分以内。Etherscanのリンクから取引状況を確認できます。'],
+      ['NOT A HOTELアプリで有効化', '公式アプリにウォレットを接続し、有効化の手続きを行います。利用条件・予約の確定状態は公式アプリ・公式サイトでご確認ください。'],
+    ],
+    guideNote: '定員・設備・チェックイン/アウト時刻などの利用条件はHOUSEごとに異なります。購入前に必ずNOT A HOTEL公式サイトで対象HOUSEの情報と利用規約をご確認ください。',
+    guideRefund: 'ブロックチェーンの性質上、送信後の取引の取消・返金はできません。取引が失敗（revert）した場合、代金は移動せずガス代のみ消費されます（Etherscanで状態を確認できます）。宿泊権の有効化や取引で不明点があれば、各カードの「購入相談」からご連絡ください。',
+    officialLink: 'NOT A HOTEL 公式サイト ↗',
+    lineupTitle: 'LINEUP',
+    lineupSub: '拠点から選ぶ。出品中のTHE KEYがある拠点は、カードから絞り込めます。',
+    lineupCredit: 'Photos: NOT A HOTEL 公式',
+    navGuide: '購入の流れ',
+    navVoices: 'TRUST',
+    navMyKeys: 'MY KEYS',
+    navCta: '出品を見る',
+    heroTitle: '世界中のNOT A HOTELを、一泊から。',
+    statement: 'THE KEYは、NOT A HOTELに一泊できる宿泊券NFTです。11hotelは公開出品と相場の目安をリアルタイムに整理し、購入から公式アプリでの有効化まで、ひとつの画面で完結させます。',
+    statementLink: '購入の流れを見る',
+    trustTitle: '安全性・取引の仕組み',
+    trustNote: '11hotelは宿泊券やお預かり資金を保管しません。仕組みそのものをご確認いただけます。',
+    trustPoints: [
+      ['非保管（ノンカストディアル）', '11hotelはNFTや購入代金を継続保管しません。購入は買い手自身のウォレットから、11hotel決済コントラクトへ直接署名・送信する操作です。'],
+      ['原子的な1トランザクション', '宿泊券の取得・購入者への移転・11hotel取扱料の送金は同一トランザクションで実行されます。いずれかが失敗すると全体が取り消され、代金は移動しません。'],
+      ['公開検証可能・管理者キーなし', '取引はEtherscanでいつでも確認できます。決済コントラクトに管理者キー・資金引き出し機能・アップグレード経路はありません。'],
+    ],
+    disclaimer: '本ページは公開出品情報の整理と参考目安の表示であり、投資助言・売買の推奨ではありません。表示する11hotel販売価格には取扱料が含まれます。購入はご自身のウォレットから11hotel決済コントラクトへ署名・送信する操作で、宿泊券の取得と購入者への移転を一つの取引で実行します。11hotelは取引完了後にNFTや購入代金を継続保管しません。価格・流動性・宿泊権の有効性を保証しません。ご購入前にNOT A HOTEL公式の利用条件をご確認ください。',
+    termsLabel: '利用規約',
+    privacyLabel: 'プライバシーポリシー',
+  },
+  en: {
+    eyebrow: '11HOTEL MARKET — NOT A HOTEL THE KEY',
+    sub: 'Compare live listings and buy directly, or let 11hotel support the purchase end to end.',
+    feeKicker: 'ONE-STEP CHECKOUT',
+    feeTitle: 'Purchase, delivery and 11hotel handling in one signature.',
+    feeBody: 'The displayed price includes the 11hotel handling margin. Payment and delivery complete atomically; if any step fails, the entire transaction reverts.',
+    retry: 'Try again',
+    switchLabel: '日本語',
+    live: 'LIVE',
+    floor: 'Floor',
+    median: 'Recent median',
+    listings: 'Listed',
+    empty: 'No vouchers match these filters right now. Adjust the filters or check back soon.',
+    error: 'Could not load listings. Please try again shortly.',
+    keysLink: 'MY KEYS →',
+    ctlPlace: 'Place',
+    ctlMonth: 'Check-in month',
+    ctlSort: 'Sort',
+    ctlAllPlaces: 'All places',
+    ctlAllMonths: 'All months',
+    sortPrice: 'Price: low to high',
+    sortDate: 'Check-in: soonest',
+    guideTitle: 'How buying works',
+    guideSteps: [
+      ['Review and sign once', 'Confirm the 11hotel price and sign once with your own wallet.'],
+      ['NFT arrives in your wallet', 'Usually within minutes. Track the transaction on Etherscan.'],
+      ['Activate in the NOT A HOTEL app', 'Connect your wallet in the official app and complete activation there. Check the official app/site for your terms and confirmation status.'],
+    ],
+    guideNote: 'Capacity, amenities and check-in/out terms differ per HOUSE. Always review the HOUSE details and terms on the official NOT A HOTEL site before buying.',
+    guideRefund: 'Blockchain transactions cannot be cancelled or refunded once sent. If a transaction fails (reverts), no funds move — only gas is spent (check the status on Etherscan). For questions about activation or a trade, use "Ask 11hotel" on any card.',
+    officialLink: 'NOT A HOTEL official site ↗',
+    lineupTitle: 'LINEUP',
+    lineupSub: 'Browse by place. Tap a card to filter live THE KEY listings.',
+    lineupCredit: 'Photos: NOT A HOTEL official',
+    navGuide: 'How to buy',
+    navVoices: 'Trust',
+    navMyKeys: 'My Keys',
+    navCta: 'View listings',
+    heroTitle: 'A night at NOT A HOTEL, one KEY away.',
+    statement: 'THE KEY is an NFT voucher for a one-night stay at NOT A HOTEL. 11hotel organizes live listings and market reference in real time — from purchase to activation in the official app, all in one place.',
+    statementLink: 'See how buying works',
+    trustTitle: 'Safety & how it works',
+    trustNote: '11hotel does not hold custody of stay keys or purchase funds. You can verify the mechanics yourself.',
+    trustPoints: [
+      ['Non-custodial', '11hotel never retains custody of the NFT or purchase funds. A purchase is you signing and sending a transaction directly from your own wallet to the 11hotel checkout contract.'],
+      ['One atomic transaction', 'Acquisition, delivery to you, and the 11hotel handling payment execute in a single transaction. If any step fails, everything reverts and no funds move.'],
+      ['Publicly verifiable, no admin key', 'Every transaction can be checked on Etherscan at any time. The checkout contract has no admin key, no withdrawal function, and no upgrade path.'],
+    ],
+    disclaimer: 'This page organizes public listing data and shows reference estimates only — not investment advice or a solicitation. The displayed 11hotel price includes a handling margin. A purchase signs and sends one atomic transaction from your wallet to the 11hotel checkout contract, which acquires and delivers the stay key. 11hotel does not retain custody of the NFT or purchase funds after completion. Price, liquidity and stay validity are not guaranteed. Review NOT A HOTEL\'s official terms before buying.',
+    termsLabel: 'Terms of Service',
+    privacyLabel: 'Privacy Policy',
+  },
+};
+
+const d = t(dict, lang);
+const coverImage = lineup.find((p) => p.imageUrl)?.imageUrl ?? null;
+---
+
+<div class="km" data-lang={lang} data-checkout={import.meta.env.KEY_CHECKOUT_CONTRACT ?? ''}>
+  <nav class="km-nav" aria-label="11HOTEL MARKET">
+    <div class="km-nav-inner">
+      <a class="km-nav-brand" href="/">11HOTEL<span>THE KEY MARKET</span></a>
+      <div class="km-nav-links">
+        <a class="km-nav-secondary" href="#kmLineup">{d.lineupTitle}</a>
+        <a class="km-nav-secondary" href="#kmGuide">{d.navGuide}</a>
+        <a class="km-nav-secondary" href="#kmTrust">{d.navVoices}</a>
+        <a href="/vip/keys">{d.navMyKeys}</a>
+      </div>
+      <a class="km-nav-cta" href="#kmGrid">{d.navCta}</a>
+    </div>
+  </nav>
+
+  <div class="km-cover">
+    {coverImage && <img class="km-cover-img" src={coverImage} alt="" loading="eager" decoding="async" />}
+    <div class="km-cover-inner">
+      <h1 class="km-hero-title">{d.heroTitle}</h1>
+      <p class="km-sub">{d.sub}</p>
+    </div>
+    <span class="km-cover-credit">{d.lineupCredit}</span>
+  </div>
+
+  <section class="km-statement">
+    <p>{d.statement}</p>
+    <a href="#kmGuide"><i>▶</i> {d.statementLink}</a>
+  </section>
+
+  <header class="km-hero">
+    <div class="km-livebar">
+      <span class="km-live"><i class="km-dot"></i>{d.live}</span>
+      <span class="km-ago" id="kmAgo">—</span>
+      <span class="km-stat"><em>{d.floor}</em><b id="kmFloor">—</b></span>
+      <span class="km-stat"><em>{d.median}</em><b id="kmMedian">—</b></span>
+      <span class="km-stat"><em>{d.listings}</em><b id="kmCount">—</b></span>
+      <span class="km-stat"><em>ETH/JPY</em><b id="kmRate">—</b></span>
+    </div>
+    <p class="km-livebar-note" id="kmFloorBasisNote"></p>
+  </header>
+
+  <div class="km-ticker" id="kmTicker" hidden aria-hidden="true">
+    <div class="km-ticker-track" id="kmTickerTrack"></div>
+  </div>
+
+  <section class="km-lineup" aria-label={d.lineupTitle}>
+    <div class="km-lineup-head">
+      <h2 class="km-label">{d.lineupTitle}</h2>
+      <p class="km-label-sub">{d.lineupSub}</p>
+    </div>
+    <div class="km-lineup-grid" id="kmLineup">
+      {lineup.map((p) => (
+        <button type="button" class="km-lu" data-key={p.key} data-aliases={JSON.stringify(p.aliases)} aria-pressed="false">
+          {p.imageUrl
+            ? <img class="km-lu-img" src={p.imageUrl} alt={p.title} loading="lazy" decoding="async" />
+            : <span class="km-lu-img km-lu-img--ph" aria-hidden="true"></span>}
+          <span class="km-lu-body">
+            <em>{p.area}</em>
+            <strong>{p.title.replace(/^NOT A HOTEL\s*/, '')}</strong>
+            <span class="km-lu-copy">{p.shortLabel}</span>
+          </span>
+          <span class="km-lu-status" data-lu-status={p.key}>—</span>
+        </button>
+      ))}
+    </div>
+    <p class="km-lineup-credit">{d.lineupCredit}</p>
+  </section>
+
+  <div class="km-controls">
+    <label><span>{d.ctlPlace}</span>
+      <select id="kmPlace"><option value="">{d.ctlAllPlaces}</option></select>
+    </label>
+    <label><span>{d.ctlMonth}</span>
+      <select id="kmMonth"><option value="">{d.ctlAllMonths}</option></select>
+    </label>
+    <label><span>{d.ctlSort}</span>
+      <select id="kmSort">
+        <option value="price">{d.sortPrice}</option>
+        <option value="date">{d.sortDate}</option>
+      </select>
+    </label>
+  </div>
+
+  <section class="km-board">
+    <div class="km-note" id="kmError" hidden><p>{d.error}</p><button type="button" id="kmRetry">{d.retry}</button></div>
+    <div class="km-note" id="kmEmpty" hidden><p>{d.empty}</p></div>
+    <div class="km-note km-note--warn" id="kmTokenNote" hidden><p></p></div>
+    <div class="km-grid" id="kmGrid" aria-busy="true">
+      {Array.from({ length: 8 }).map(() => (
+        <article class="km-card km-card--skeleton" aria-hidden="true">
+          <div class="km-sk-img"></div>
+          <div class="km-sk-body"><i></i><i></i><i></i></div>
+        </article>
+      ))}
+    </div>
+    <details class="km-ended" id="kmEnded" hidden>
+      <summary id="kmEndedTitle"></summary>
+      <div class="km-grid km-grid--ended" id="kmEndedGrid"></div>
+    </details>
+  </section>
+
+  <aside class="km-fee-intro" aria-label={d.feeKicker}>
+    <p>{d.feeKicker}</p>
+    <div><strong>{d.feeTitle}</strong><span>{d.feeBody}</span></div>
+  </aside>
+
+  <section class="km-guide" id="kmGuide">
+    <h2 class="km-label">{d.guideTitle}</h2>
+    <ol class="km-guide-steps">
+      {d.guideSteps.map(([h, p], i) => (
+        <li><span class="km-guide-n">{String(i + 1).padStart(2, '0')}</span><h3>{h}</h3><p>{p}</p></li>
+      ))}
+    </ol>
+    <p class="km-guide-note">{d.guideNote} <a href="https://notahotel.com/" target="_blank" rel="noopener noreferrer">{d.officialLink}</a></p>
+    <p class="km-guide-note km-guide-note--refund">{d.guideRefund}</p>
+  </section>
+
+  <section class="km-voices" id="kmTrust" aria-label={d.trustTitle}>
+    <h2 class="km-label">{d.trustTitle}</h2>
+    <p class="km-label-sub">{d.trustNote}</p>
+    <div class="km-voices-grid">
+      {d.trustPoints.map(([h, p]) => (
+        <figure class="km-voice">
+          <blockquote>{h}</blockquote>
+          <figcaption><span>{p}</span></figcaption>
+        </figure>
+      ))}
+    </div>
+  </section>
+
+  <footer class="km-legal">
+    <p>{d.disclaimer}</p>
+    <p class="km-legal-links"><a href="/terms">{d.termsLabel}</a><a href="/privacy">{d.privacyLabel}</a></p>
+  </footer>
+</div>
+
+<script>
+  type Listing = {
+    tokenId: string; orderHash: string; house: string; prefecture: string; place: string;
+    checkIn: string; checkInLabel: string; nights: number | null; price: number | null;
+    priceWei: string | null;
+    imageUrl: string | null; imageIsAreaPhoto: boolean; houseOfficialUrl: string | null; houseNote: string | null; openseaUrl: string; lastSale: number | null;
+    sellLow: number | null; sellHigh: number | null;
+    verdict: 'below' | 'fair' | 'above' | null; comment: { ja: string; en: string } | null;
+  };
+  type Payload = {
+    updatedAt: string; floor: number | null; recentSaleMedian: number | null; recentSaleCount: number;
+    recentSales: Array<{ tokenId: string | null; price: number; at: number }>;
+    ethJpy: number | null;
+    listings: Listing[]; supportFeeBps?: number; checkoutReady?: boolean; nightlyFloorEth?: number | null; error?: string;
+  };
+
+  const STR = {
+    ja: {
+      nights: (n: number) => `${n}泊`, days: (n: number) => `あと${n}日`, today: '本日チェックイン', ended: '終了',
+      buy: (p: string) => `11hotelで購入 · ${p} ETH`, viewDetail: '詳細を見る', verify: '取引情報 ↗',
+      askPrice: '宿泊券価格', supportFee: (p: string) => `11hotel取扱料 ${p}%`, supportTotal: '11hotel販売価格', directNote: '5%取扱料込み',
+      soldTicker: (p: string, rel: string) => `${p} ETH で成約${rel ? ` · ${rel}` : ''}`,
+      minAgo: (n: number) => `${n}分前`, hourAgo: (n: number) => `${n}時間前`, dayAgo: (n: number) => `${n}日前`, justNow: 'たった今',
+      medianN: (n: number) => `${n}件`, updatedAgo: (n: number) => `${n}秒前に更新`,
+      noKeys: 'このウォレットにTHE KEYは見つかりませんでした。', estBand: '現在の相場の目安',
+      sellOs: '出品する ↗', keysFound: (n: number) => `${n}件のキーを所有しています`, lookupFailed: '照会に失敗しました',
+      luOnSale: (n: number, from: string | null) => from ? `${n}件 出品中 · ${from} ETH〜` : `${n}件 出品中`,
+      luNone: '現在出品なし',
+      selectedBadge: '選択中', tokenNotFound: '指定された宿泊券が見つかりませんでした。売却済み・取り下げ・期限切れの可能性があります。以下は現在の出品一覧です。',
+      areaPhotoNote: (area: string) => `${area}エリア写真（このHOUSE自体の写真ではありません）`,
+      houseOfficial: '対象拠点の公式ページで確認 ↗',
+      floorFrom: (eth: string, jpy: string) => `1泊 ${eth} ETH〜（約${jpy}円〜）`,
+      noComparableSale: '比較可能な個別成約データなし',
+      extremeAbove: '出品価格が高めです。部屋タイプ・利用条件を公式情報でご確認ください。',
+      floorBasisNote: 'フロア・成約中央値は外部出品の生値（取扱料は含みません）',
+      nearCheckinBadge: '直前日程',
+      nearCheckinWarning: (days: number) => `チェックインまで${days}日。購入後はNFT受領・公式アプリでの有効化・利用条件確認が必要です。取消・返金はできません。不安な場合は「購入相談」もご検討ください。`,
+    },
+    en: {
+      nights: (n: number) => `${n} night${n === 1 ? '' : 's'}`, days: (n: number) => `in ${n}d`, today: 'check-in today', ended: 'ended',
+      buy: (p: string) => `Buy from 11hotel · ${p} ETH`, viewDetail: 'View details', verify: 'Source ↗',
+      askPrice: 'Stay key price', supportFee: (p: string) => `11hotel handling ${p}%`, supportTotal: '11hotel price', directNote: '5% handling included',
+      soldTicker: (p: string, rel: string) => `Sold at ${p} ETH${rel ? ` · ${rel}` : ''}`,
+      minAgo: (n: number) => `${n}m ago`, hourAgo: (n: number) => `${n}h ago`, dayAgo: (n: number) => `${n}d ago`, justNow: 'just now',
+      medianN: (n: number) => `${n} sales`, updatedAgo: (n: number) => `updated ${n}s ago`,
+      noKeys: 'No THE KEY found in this wallet.', estBand: 'Current market range',
+      sellOs: 'List a key ↗', keysFound: (n: number) => `You hold ${n} key${n === 1 ? '' : 's'}`, lookupFailed: 'Lookup failed',
+      luOnSale: (n: number, from: string | null) => from ? `${n} on sale · from ${from} ETH` : `${n} on sale`,
+      luNone: 'No listings now',
+      selectedBadge: 'Selected', tokenNotFound: 'The requested stay key could not be found. It may be sold, withdrawn, or expired. Shown below is the current listing set.',
+      areaPhotoNote: (area: string) => `${area} area photo (not a photo of this specific HOUSE)`,
+      houseOfficial: 'Check the official page for this HOUSE ↗',
+      floorFrom: (eth: string, jpy: string) => `From ${eth} ETH/night (approx. ¥${jpy}~)`,
+      noComparableSale: 'No comparable individual sale data',
+      extremeAbove: 'This listing is priced high. Check the room type and terms on the official source.',
+      floorBasisNote: 'Floor / sale median are raw external listing prices (handling not included)',
+      nearCheckinBadge: 'Last-minute',
+      nearCheckinWarning: (days: number) => `Check-in in ${days} day${days === 1 ? '' : 's'}. After purchase you must receive the NFT, activate it in the official app, and confirm terms yourself. Purchases cannot be cancelled or refunded. If unsure, use "Ask 11hotel" instead.`,
+    },
+  } as const;
+
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+  const fmt = (n: number | null | undefined) =>
+    n == null || !isFinite(n) ? '—' : (Math.round(n * 1000) / 1000).toString();
+  const formatWei = (wei: bigint, maxDecimals = 8) => {
+    const whole = wei / 10n ** 18n;
+    const fraction = (wei % 10n ** 18n).toString().padStart(18, '0').slice(0, maxDecimals).replace(/0+$/, '');
+    return fraction ? `${whole}.${fraction}` : whole.toString();
+  };
+  const jpy = (eth: number | null | undefined, rate: number | null | undefined) =>
+    eth == null || rate == null || !isFinite(eth) || !isFinite(rate)
+      ? '' : `≈¥${Math.round(eth * rate).toLocaleString('ja-JP')}`;
+  const init = () => {
+    const root = document.querySelector<HTMLElement>('.km');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+    const lang = (root.dataset.lang === 'en' ? 'en' : 'ja') as 'ja' | 'en';
+    const s = STR[lang];
+    const el = (id: string) => document.getElementById(id)!;
+
+    let market: Payload | null = null;
+    let lastUpdated = 0;
+    const prevPrice = new Map<string, number | null>();
+
+    // ?token=... 指定時の対象商品。初回表示時だけスクロールし、20秒ごとの再取得では引き戻さない
+    const requestedTokenRaw = new URLSearchParams(location.search).get('token');
+    const requestedToken = requestedTokenRaw && /^\d+$/.test(requestedTokenRaw) ? requestedTokenRaw : null;
+    let didFocusToken = false;
+    // ?place=... 指定時、選択肢が揃い次第そのPlaceで初期絞り込みする（旧 /stay?place=... からの導線）
+    const requestedPlace = new URLSearchParams(location.search).get('place');
+
+    const timers: number[] = [];
+    timers.push(window.setInterval(() => { if (!document.hidden) load(); }, 20000));
+    timers.push(window.setInterval(() => {
+      if (!lastUpdated) return;
+      el('kmAgo').textContent = s.updatedAgo(Math.round((Date.now() - lastUpdated) / 1000));
+    }, 1000));
+    document.addEventListener('astro:before-swap', () => timers.forEach(clearInterval), { once: true });
+
+    el('kmFloorBasisNote').textContent = s.floorBasisNote;
+
+    const rel = (at: number) => {
+      if (!at) return '';
+      const diff = Math.max(0, Math.floor(Date.now() / 1000 - at));
+      if (diff < 90) return s.justNow;
+      if (diff < 3600) return s.minAgo(Math.floor(diff / 60));
+      if (diff < 86400) return s.hourAgo(Math.floor(diff / 3600));
+      return s.dayAgo(Math.floor(diff / 86400));
+    };
+
+    const countdown = (checkIn: string) => {
+      if (!checkIn) return null;
+      const target = new Date(`${checkIn}T00:00:00+09:00`).getTime();
+      if (!isFinite(target)) return null;
+      const days = Math.ceil((target - Date.now()) / 86400000);
+      if (days > 0) return { label: s.days(days), ended: false, days };
+      if (days === 0) return { label: s.today, ended: false, days: 0 };
+      return { label: s.ended, ended: true, days };
+    };
+    const NEAR_CHECKIN_DAYS = 3;
+
+    function renderTicker(data: Payload) {
+      const track = el('kmTickerTrack');
+      const items = (data.recentSales ?? []).filter((x) => x.price > 0).map((x) =>
+        `<span class="km-tick"><i></i>${esc(s.soldTicker(fmt(x.price), rel(x.at)))}</span>`).join('');
+      if (!items) { el('kmTicker').hidden = true; return; }
+      el('kmTicker').hidden = false;
+      track.innerHTML = items + items; // シームレスループ用に2周分
+    }
+
+    function cardHtml(r: Listing, ended: boolean, data: Payload, selectedToken: string | null = null): string {
+      const meta = [r.place || r.prefecture].filter(Boolean).map(esc).join('');
+      const nights = r.nights != null ? s.nights(r.nights) : '';
+      const cd = countdown(r.checkIn);
+      const changed = prevPrice.has(r.tokenId) && prevPrice.get(r.tokenId) !== r.price;
+      const isSelected = selectedToken != null && r.tokenId === selectedToken;
+      const feeBps = Math.max(0, data.supportFeeBps ?? 500);
+      const priceWei = r.priceWei && /^\d+$/.test(r.priceWei) ? BigInt(r.priceWei) : null;
+      const rateFeeWei = priceWei == null ? null : (priceWei * BigInt(feeBps) + 9_999n) / 10_000n;
+      const rateTotalWei = priceWei == null || rateFeeWei == null ? null : priceWei + rateFeeWei;
+      // V2稼働時（data.nightlyFloorEthがある場合）のみ、1泊あたり最低販売価格の下限を実際の表示価格にも適用する。
+      // 未稼働（V1）時はレート計算そのまま＝実際の請求額と一致させる
+      const nightsForFloor = r.nights && r.nights > 0 ? r.nights : 1;
+      const floorTotalWei = data.nightlyFloorEth != null ? BigInt(Math.round(data.nightlyFloorEth * nightsForFloor * 1e18)) : null;
+      const totalWei = rateTotalWei == null ? floorTotalWei
+        : (floorTotalWei != null && floorTotalWei > rateTotalWei ? floorTotalWei : rateTotalWei);
+      const supportTotal = totalWei == null ? null : formatWei(totalWei);
+      const supportTotalNumber = totalWei == null ? null : Number(totalWei) / 1e18;
+      const supportHref = `/stay/${encodeURIComponent(r.tokenId)}?support=1&fee_bps=${feeBps}`;
+
+      // 極端な高値判定はOpenSea相場帯(sellHigh)を内部基準として維持するが、
+      // below/fair/above・参考価格帯そのものはカードに表示しない
+      const feeMultiplier = 1 + feeBps / 10000;
+      const sellHighIncl = r.sellHigh != null ? r.sellHigh * feeMultiplier : null;
+      const isExtreme = r.verdict === 'above' && sellHighIncl != null && supportTotalNumber != null
+        && supportTotalNumber > sellHighIncl * 1.5;
+      const isNearCheckin = !ended && !!cd && !cd.ended && cd.days <= NEAR_CHECKIN_DAYS;
+      const floorEthForNote = data.nightlyFloorEth ?? 0.5;
+      const floorJpy = data.ethJpy != null ? Math.round(floorEthForNote * data.ethJpy).toLocaleString('ja-JP') : null;
+
+      return `<article class="km-card${changed ? ' km-flash' : ''}${isSelected ? ' km-card--selected' : ''}" id="key-${esc(r.tokenId)}" data-token="${esc(r.tokenId)}">
+        <div class="km-card-img">${r.imageUrl ? `<img src="${esc(r.imageUrl)}" alt="${esc(r.house)}" loading="lazy">` : ''}${r.imageIsAreaPhoto ? `<span class="km-area-photo-note">${esc(s.areaPhotoNote(r.place || r.prefecture))}</span>` : ''}</div>
+        <div class="km-card-body">
+          ${isSelected ? `<span class="km-selected-badge">${esc(s.selectedBadge)}</span>` : ''}
+          <p class="km-meta">
+            <span>${meta}${nights ? ` · ${esc(nights)}` : ''} · ${esc(r.checkInLabel)}</span>
+            ${cd ? `<span class="km-cd${cd.ended ? ' km-cd--ended' : ''}">${esc(cd.label)}</span>` : ''}
+          </p>
+          <h3 class="km-name">${esc(r.house)}</h3>
+          ${r.houseNote ? `<p class="km-house-note">${esc(r.houseNote)}</p>` : ''}
+          <div class="km-price-row">
+            <strong class="km-price">${supportTotal ?? '—'}<small>ETH</small>${jpy(supportTotalNumber, data.ethJpy) ? `<span class="km-jpy">${jpy(supportTotalNumber, data.ethJpy)}</span>` : ''}</strong>
+          </div>
+          ${floorJpy ? `<p class="km-floor-from">${esc(s.floorFrom(fmt(floorEthForNote), floorJpy))}</p>` : ''}
+          ${isExtreme ? `<p class="km-extreme-warning">${esc(s.extremeAbove)}</p>` : ''}
+          ${r.lastSale == null ? `<p class="km-no-comparable">${esc(s.noComparableSale)}</p>` : ''}
+          ${isNearCheckin ? `<p class="km-near-checkin"><strong>${esc(s.nearCheckinBadge)}</strong> ${esc(s.nearCheckinWarning(cd!.days))}</p>` : ''}
+          ${!ended && r.price != null ? `<div class="km-cta">
+            <a class="km-buy" href="${esc(supportHref)}">${supportTotal ? s.buy(supportTotal) : s.viewDetail}<small>${s.directNote}</small></a>
+            ${r.houseOfficialUrl ? `<a class="km-house-official" href="${esc(r.houseOfficialUrl)}" target="_blank" rel="noopener noreferrer">${s.houseOfficial}</a>` : ''}
+          </div>` : ''}
+          <p class="km-foot">
+            <span class="km-tid">#${esc(r.tokenId)}</span>
+          </p>
+        </div>
+      </article>`;
+    }
+
+    // ── 絞り込み・並び替え ──
+    const placeSel = el('kmPlace') as HTMLSelectElement;
+    const monthSel = el('kmMonth') as HTMLSelectElement;
+    const sortSel = el('kmSort') as HTMLSelectElement;
+    let optionsReady = false;
+
+    // ── LINEUP（拠点カード）──
+    const luNorm = (v: string) => v.toLowerCase().replace(/[_-]+/g, ' ').trim();
+    const luMatches = (r: Listing, aliases: string[]) => {
+      const hay = luNorm([r.house, r.place, r.prefecture].filter(Boolean).join(' '));
+      return aliases.some((a) => hay.includes(luNorm(a)));
+    };
+    const luCards = Array.from(document.querySelectorAll<HTMLButtonElement>('.km-lu'));
+    const luAliases = (card: HTMLButtonElement): string[] => {
+      try { return JSON.parse(card.dataset.aliases || '[]'); } catch { return []; }
+    };
+    let activeAliases: string[] | null = null;
+    luCards.forEach((card) => card.addEventListener('click', () => {
+      const wasActive = card.getAttribute('aria-pressed') === 'true';
+      luCards.forEach((c) => c.setAttribute('aria-pressed', 'false'));
+      if (wasActive) {
+        activeAliases = null;
+      } else {
+        activeAliases = luAliases(card);
+        card.setAttribute('aria-pressed', 'true');
+        placeSel.value = '';
+        document.querySelector('.km-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (market) render(market);
+    }));
+
+    function updateLineup(data: Payload) {
+      const bps = data.supportFeeBps ?? 0;
+      const floorEth = data.nightlyFloorEth ?? null;
+      const activeRows = data.listings.filter((r) => !countdown(r.checkIn)?.ended);
+      for (const card of luCards) {
+        const st = card.querySelector<HTMLElement>('.km-lu-status');
+        if (!st) continue;
+        const rows = activeRows.filter((r) => luMatches(r, luAliases(card)));
+        if (rows.length) {
+          // カード本体の表示価格（V2稼働時は1泊あたり最低販売価格の下限つき）と同じ計算で最安値を出す
+          const totals = rows.map((r) => {
+            if (r.price == null) return null;
+            const rateTotal = r.price * (1 + bps / 10000);
+            if (floorEth == null) return rateTotal;
+            const nights = r.nights && r.nights > 0 ? r.nights : 1;
+            return Math.max(rateTotal, floorEth * nights);
+          }).filter((p): p is number => p != null);
+          const min = totals.length ? Math.min(...totals) : null;
+          st.textContent = s.luOnSale(rows.length, min != null ? fmt(min) : null);
+          card.classList.add('has-listings');
+        } else {
+          st.textContent = s.luNone;
+          card.classList.remove('has-listings');
+        }
+      }
+    }
+
+    function buildOptions(data: Payload) {
+      if (optionsReady) return;
+      const places = [...new Set(data.listings.map((r) => r.place || r.prefecture).filter(Boolean))].sort();
+      const months = [...new Set(data.listings.map((r) => r.checkIn?.slice(0, 7)).filter(Boolean))].sort();
+      for (const p of places) placeSel.insertAdjacentHTML('beforeend', `<option value="${esc(p)}">${esc(p)}</option>`);
+      for (const m of months) {
+        const [y, mo] = m.split('-');
+        const label = lang === 'ja' ? `${y}年${Number(mo)}月` : new Date(`${m}-01T12:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        monthSel.insertAdjacentHTML('beforeend', `<option value="${esc(m)}">${esc(label)}</option>`);
+      }
+      optionsReady = true;
+      if (requestedPlace && places.includes(requestedPlace)) placeSel.value = requestedPlace;
+      [placeSel, monthSel, sortSel].forEach((c) => c.addEventListener('change', () => { if (market) render(market); }));
+    }
+
+    function applyControls(rows: Listing[]): Listing[] {
+      let out = rows;
+      if (activeAliases) out = out.filter((r) => luMatches(r, activeAliases!));
+      if (placeSel.value) out = out.filter((r) => (r.place || r.prefecture) === placeSel.value);
+      if (monthSel.value) out = out.filter((r) => r.checkIn?.startsWith(monthSel.value));
+      const sort = sortSel.value;
+      return [...out].sort((a, b) => {
+        if (sort === 'date') return (a.checkIn || '9999').localeCompare(b.checkIn || '9999');
+        if (sort === 'value') {
+          // 相場レンジ上限に対する出品価格の比率が低い＝割安
+          const va = a.price != null && a.sellHigh ? a.price / a.sellHigh : Infinity;
+          const vb = b.price != null && b.sellHigh ? b.price / b.sellHigh : Infinity;
+          return va - vb;
+        }
+        return (a.price ?? Infinity) - (b.price ?? Infinity);
+      });
+    }
+
+    function render(data: Payload) {
+      el('kmFloor').textContent = data.floor != null ? `${fmt(data.floor)} ETH` : '—';
+      el('kmMedian').textContent = data.recentSaleMedian != null
+        ? `${fmt(data.recentSaleMedian)} ETH · ${s.medianN(data.recentSaleCount)}` : '—';
+      el('kmRate').textContent = data.ethJpy != null ? `¥${Math.round(data.ethJpy).toLocaleString('ja-JP')}` : '—';
+      renderTicker(data);
+      buildOptions(data);
+      updateLineup(data);
+
+      const active = applyControls(data.listings.filter((r) => !countdown(r.checkIn)?.ended));
+      const ended = data.listings.filter((r) => countdown(r.checkIn)?.ended)
+        .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+
+      el('kmCount').textContent = String(active.length);
+      el('kmEmpty').hidden = active.length !== 0;
+
+      const grid = el('kmGrid');
+      grid.setAttribute('aria-busy', 'false');
+      grid.innerHTML = active.map((r) => cardHtml(r, false, data, requestedToken)).join('');
+
+      const endedBox = el('kmEnded') as HTMLDetailsElement;
+      if (ended.length > 0) {
+        endedBox.hidden = false;
+        el('kmEndedTitle').textContent = lang === 'ja'
+          ? `チェックイン日を過ぎた出品（${ended.length}件）`
+          : `Past check-in date (${ended.length})`;
+        el('kmEndedGrid').innerHTML = ended.map((r) => cardHtml(r, true, data, requestedToken)).join('');
+      } else {
+        endedBox.hidden = true;
+      }
+
+      // ── Token指定商品の強調・見つからない場合の案内・初回表示時のみスクロール ──
+      const tokenNote = el('kmTokenNote');
+      if (requestedToken) {
+        const found = data.listings.find((r) => r.tokenId === requestedToken);
+        if (!found) {
+          tokenNote.hidden = false;
+          tokenNote.querySelector('p')!.textContent = s.tokenNotFound;
+        } else {
+          tokenNote.hidden = true;
+          if (ended.some((r) => r.tokenId === requestedToken)) endedBox.open = true;
+        }
+        if (!didFocusToken) {
+          didFocusToken = true;
+          requestAnimationFrame(() => document.getElementById(`key-${requestedToken}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        }
+      } else {
+        tokenNote.hidden = true;
+      }
+
+      prevPrice.clear();
+      for (const r of data.listings) prevPrice.set(r.tokenId, r.price);
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/vip/market', { headers: { accept: 'application/json' } });
+        const data = await res.json() as Payload;
+        if (!res.ok || data.error) { el('kmError').hidden = false; return; }
+        el('kmError').hidden = true;
+        market = data;
+        lastUpdated = Date.now();
+        render(data);
+      } catch { el('kmError').hidden = false; }
+    }
+    el('kmRetry').addEventListener('click', load);
+    load();
+  };
+
+  init();
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style is:global>
+  /* NOT A HOTEL 公式トップ準拠: 黒基調・中央揃え・太ゴシック・青アクセント（2026-07-20） */
+  body:has(.km), body:has(.km) main { background: #080808; }
+  body:has(.km) main { padding-top: 0; }
+  body:has(.km) > footer { background: #080808; color: rgba(255,255,255,.62); border-top-color: rgba(255,255,255,.1); }
+  body:has(.km) #hd { display: none; }
+  .km {
+    --bg: #080808; --surface: #111111; --line: rgba(255,255,255,.14); --line2: rgba(255,255,255,.07);
+    --txt: #F5F5F2; --muted: rgba(255,255,255,.62); --dim: rgba(255,255,255,.4); --gold: #1473FF; --green: #6fcf97; --amber: #e8965a;
+    --ink: #F5F5F2; --accent: #1473FF;
+    --disp: 'Helvetica Neue', Helvetica, Arial, 'Inter', sans-serif; --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'Inter', -apple-system, 'Noto Sans JP', sans-serif;
+    max-width: 1240px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 44px) 90px;
+    color: var(--txt); font-family: var(--sans);
+  }
+
+  /* ── 公式風トップナビ（黒） ── */
+  .km-nav { position: sticky; top: 0; z-index: 90; width: 100vw; margin-left: calc(50% - 50vw); background: rgba(10,10,12,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line2); }
+  .km-nav-inner { max-width: 1240px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 44px); min-height: 58px; display: flex; align-items: center; gap: 22px; }
+  .km-nav-brand { display: flex; flex-direction: column; gap: 1px; text-decoration: none; color: #fff; font-family: var(--disp); font-weight: 800; font-size: 17px; letter-spacing: .06em; line-height: 1; }
+  .km-nav-brand span { font-size: 8px; font-weight: 600; letter-spacing: .3em; color: var(--dim); }
+  .km-nav-links { display: flex; align-items: center; gap: clamp(12px, 2vw, 26px); margin-left: auto; overflow-x: auto; }
+  .km-nav-links a { color: var(--muted); text-decoration: none; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; padding: 6px 0; }
+  .km-nav-links a:hover { color: #fff; }
+  .km-nav-cta { flex-shrink: 0; background: #fff; color: #080808; text-decoration: none; font-family: var(--disp); font-weight: 700; font-size: 11.5px; letter-spacing: .06em; padding: 10px 18px; border-radius: 999px; transition: opacity .2s; }
+  .km-nav-cta:hover { opacity: .82; }
+
+  /* ── 全幅フォトヒーロー（中央揃え） ── */
+  .km-cover { position: relative; width: 100vw; margin-left: calc(50% - 50vw); height: min(86vh, 780px); background: #080808; overflow: hidden; }
+  .km-cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: .82; }
+  .km-cover::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10,10,12,.5), rgba(10,10,12,.18) 40%, rgba(10,10,12,.66)); }
+  .km-cover-inner { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 clamp(16px, 5vw, 60px); }
+  .km-hero-title { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; font-style: italic; font-size: clamp(30px, 5vw, 62px); line-height: 1.18; letter-spacing: 0; color: #fff; margin: 0 0 18px; text-shadow: 0 2px 30px rgba(0,0,0,.5); }
+  .km-cover .km-sub { color: rgba(255,255,255,.88); margin: 0; max-width: 46ch; text-shadow: 0 1px 16px rgba(0,0,0,.5); }
+  .km-cover-credit { position: absolute; right: 14px; bottom: 10px; z-index: 1; font-size: 9.5px; letter-spacing: .08em; color: rgba(255,255,255,.55); }
+
+  /* ── ステートメント（公式のイントロ文に対応） ── */
+  .km-statement { padding: clamp(56px, 9vw, 110px) 0 clamp(30px, 5vw, 56px); text-align: center; }
+  .km-statement p { max-width: 620px; margin: 0 auto 30px; font-size: 14.5px; line-height: 2.4; color: var(--txt); }
+  .km-statement a { color: var(--accent); text-decoration: none; font-size: 14px; letter-spacing: .04em; }
+  .km-statement a:hover { opacity: .8; }
+  .km-statement a i { font-style: normal; font-size: 11px; margin-right: 6px; }
+
+  /* ── センターラベル見出し（公式のセクション見出しに対応） ── */
+  .km-label { font-family: var(--disp); font-weight: 700; font-size: 14px; letter-spacing: .18em; text-transform: uppercase; text-align: center; color: #fff; margin: 0 0 12px; }
+  .km-label-sub { font-size: 12px; color: var(--dim); text-align: center; margin: 0 0 34px; }
+
+  .km-hero-top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+  .km-hero-links { display: inline-flex; gap: 8px; }
+  .km-lang { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); text-decoration: none; border: 1px solid var(--line); padding: 6px 14px; transition: all .2s; white-space: nowrap; }
+  .km-lang:hover { color: var(--txt); border-color: var(--muted); }
+
+  .km-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 18px; }
+  .km-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); flex: 1 1 150px; max-width: 240px; }
+  .km-controls select { font-family: var(--sans); font-size: 13px; background: var(--surface); color: var(--txt); border: 1px solid var(--line); padding: 10px 12px; appearance: none; border-radius: 0; cursor: pointer; }
+  .km-controls select:focus { outline: none; border-color: var(--gold); }
+
+  .km-hero { margin: 18px 0 30px; }
+  .km-eyebrow { font-family: var(--serif); font-size: 12px; letter-spacing: .38em; text-transform: uppercase; color: var(--gold); margin: 0 0 14px; }
+  .km-display { font-family: var(--disp); font-weight: 800; font-size: clamp(42px, 7.2vw, 92px); line-height: .96; letter-spacing: -.01em; text-transform: uppercase; margin: 0 0 14px; color: var(--txt); }
+  .km-sub { font-size: 14px; line-height: 2; color: var(--muted); margin: 0 0 26px; max-width: 56ch; }
+
+  .km-livebar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 26px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 13px 2px; }
+  .km-livebar-note { margin: 8px 2px 0; font-size: 10.5px; color: var(--dim); letter-spacing: .02em; }
+  .km-live { display: inline-flex; align-items: center; gap: 8px; font-family: var(--disp); font-weight: 800; font-size: 13px; letter-spacing: .24em; color: var(--green); }
+  .km-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: kmPulse 1.6s ease infinite; }
+  @keyframes kmPulse { 50% { opacity: .25; } }
+  .km-ago { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; min-width: 9em; }
+  .km-stat { display: inline-flex; align-items: baseline; gap: 9px; }
+  .km-stat em { font-style: normal; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); }
+  .km-stat b { font-family: var(--sans); font-weight: 600; font-size: 19px; font-variant-numeric: lining-nums tabular-nums; color: var(--txt); }
+
+  .km-ticker { overflow: hidden; border-bottom: 1px solid var(--line2); padding: 10px 0; margin-bottom: 34px; }
+  .km-ticker-track { display: inline-flex; gap: 44px; white-space: nowrap; animation: kmScroll 40s linear infinite; will-change: transform; }
+  @keyframes kmScroll { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .km-ticker-track { animation: none; } .km-dot { animation: none; } .km-flash { animation: none; } }
+  .km-tick { display: inline-flex; align-items: center; gap: 9px; font-size: 12px; letter-spacing: .06em; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .km-tick i { width: 4px; height: 4px; background: var(--gold); border-radius: 50%; }
+
+  /* LINEUP（NOT A HOTEL式の拠点カード） */
+  .km-lineup { margin: clamp(30px, 5vw, 56px) 0 46px; }
+  .km-lineup-head { margin: 0 0 10px; }
+  .km-lineup-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+  @media (min-width: 640px) { .km-lineup-grid { grid-template-columns: repeat(2, 1fr); } }
+  .km-lu { position: relative; display: block; padding: 0; margin: 0; border: 1px solid var(--line2); border-radius: 14px; background: #111111; cursor: pointer; text-align: left; overflow: hidden; aspect-ratio: 16 / 10; transition: border-color .25s; }
+  .km-lu:hover { border-color: var(--muted); }
+  .km-lu[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+  .km-lu-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+  .km-lu:hover .km-lu-img { transform: scale(1.04); }
+  .km-lu-img--ph { background: linear-gradient(150deg, #1c1913, #0e0d0b); }
+  .km-lu-body { position: absolute; inset: auto 0 0 0; padding: 64px 20px 18px; display: grid; gap: 4px; background: linear-gradient(to top, rgba(10,9,7,.88), rgba(10,9,7,0)); }
+  .km-lu-body em { font-style: normal; font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: rgba(236,232,225,.75); }
+  .km-lu-body strong { font-family: var(--disp); font-weight: 800; font-size: clamp(22px, 2.8vw, 36px); letter-spacing: 0; text-transform: uppercase; color: #fff; line-height: 1.04; }
+  .km-lu-copy { font-size: 12px; color: rgba(236,232,225,.82); letter-spacing: .04em; }
+  .km-lu-status { position: absolute; top: 14px; right: 14px; font-family: var(--disp); font-weight: 800; font-size: 11px; letter-spacing: .12em; padding: 5px 10px; background: rgba(10,9,7,.72); color: rgba(236,232,225,.85); border: 1px solid rgba(236,232,225,.28); }
+  .km-lu.has-listings .km-lu-status { color: #7fb0ff; border-color: rgba(127,176,255,.55); }
+  .km-lineup-credit { margin: 10px 0 0; font-size: 10px; color: var(--dim); letter-spacing: .06em; text-align: right; }
+
+  .km-fee-intro { display: grid; grid-template-columns: minmax(150px, .35fr) 1fr; gap: 22px; align-items: start; margin: 38px 0 0; padding: 20px; border: 1px solid rgba(74,141,255,.3); background: rgba(74,141,255,.06); border-radius: 12px; }
+  .km-fee-intro p { margin: 2px 0 0; font-family: var(--disp); font-weight: 800; font-size: 12px; letter-spacing: .2em; color: var(--gold); }
+  .km-fee-intro div { display: grid; gap: 6px; }
+  .km-fee-intro strong { font-family: var(--disp); font-size: clamp(18px, 2.2vw, 25px); letter-spacing: .03em; }
+  .km-fee-intro span { max-width: 68ch; font-size: 12px; line-height: 1.85; color: var(--muted); }
+
+  .km-note { border: 1px solid var(--line); background: var(--surface); padding: 26px; text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .km-note p { margin: 0 0 14px; }
+  .km-note button { min-height: 44px; padding: 9px 18px; border: 1px solid var(--gold); background: transparent; color: var(--gold); font: 800 13px var(--disp); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+  .km-note--warn { border-color: rgba(232,150,90,.5); color: var(--amber); }
+  .km-note--warn p { margin: 0; }
+
+  .km-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px, 1fr)); gap: 14px; }
+  .km-card { background: var(--surface); border: 1px solid var(--line2); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: border-color .25s; }
+  .km-card:hover { border-color: var(--line); }
+  .km-card--selected { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+  .km-selected-badge { display: inline-block; align-self: flex-start; font-family: var(--disp); font-weight: 800; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #080808; background: var(--gold); padding: 4px 10px; border-radius: 999px; }
+  .km-flash { animation: kmFlash 1.6s ease; }
+  @keyframes kmFlash { 0% { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); } 100% { box-shadow: none; } }
+  .km-card-img { position: relative; aspect-ratio: 1/1; background: #f4f2ee; overflow: hidden; }
+  .km-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .km-area-photo-note { position: absolute; left: 8px; bottom: 8px; right: 8px; font-size: 10px; letter-spacing: .02em; line-height: 1.4; color: #fff; background: rgba(10,10,12,.72); padding: 5px 8px; border-radius: 4px; }
+  .km-card-body { padding: 15px 16px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .km-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin: 0; }
+  .km-cd { color: var(--gold); white-space: nowrap; font-family: var(--disp); font-weight: 800; font-size: 13px; letter-spacing: .12em; }
+  .km-cd--ended { color: var(--dim); }
+  .km-name { font-family: var(--disp); font-weight: 800; font-size: 20px; letter-spacing: .04em; text-transform: uppercase; margin: 0; line-height: 1.15; }
+  .km-price-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .km-price { font-family: var(--sans); font-weight: 600; font-size: 28px; line-height: 1; font-variant-numeric: lining-nums tabular-nums; color: var(--txt); }
+  .km-price small { font-size: 12px; color: var(--muted); margin-left: 5px; letter-spacing: .08em; }
+  .km-jpy { display: block; font-family: var(--sans); font-size: 11.5px; color: var(--gold); margin-top: 5px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+  .km-house-note { margin: -4px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--muted); }
+  .km-floor-from { margin: 0; font-size: 11px; color: var(--dim); letter-spacing: .02em; }
+  .km-extreme-warning { margin: 0; font-size: 11.5px; line-height: 1.6; color: var(--amber); border: 1px solid rgba(232,150,90,.4); background: rgba(232,150,90,.08); padding: 8px 10px; border-radius: 6px; }
+  .km-no-comparable { margin: 0; font-size: 10.5px; color: var(--dim); }
+  .km-near-checkin { margin: 0; font-size: 11.5px; line-height: 1.7; color: var(--txt); border: 1px solid rgba(232,150,90,.5); background: rgba(232,150,90,.1); padding: 10px 12px; border-radius: 6px; }
+  .km-near-checkin strong { font-family: var(--disp); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--amber); margin-right: 6px; }
+  .km-fees { margin: 2px 0 0; border: 1px solid var(--line2); }
+  .km-fees div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line2); }
+  .km-fees div:last-child { border-bottom: 0; }
+  .km-fees dt { font-size: 10.5px; color: var(--dim); }
+  .km-fees dd { margin: 0; text-align: right; font-family: var(--serif); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .km-fees-total { background: rgba(74,141,255,.08); }
+  .km-fees-total dt, .km-fees-total dd { color: var(--gold); }
+  .km-fees-total dd small { display: block; margin-top: 2px; font: 10px var(--sans); color: var(--muted); }
+  .km-cta { margin-top: auto; display: grid; gap: 8px; }
+  .km-buy { font-family: var(--disp); font-weight: 700; font-size: 14px; letter-spacing: .04em;
+    display: block; text-align: center; text-decoration: none;
+    background: #fff; color: #080808; border: 1px solid #fff; border-radius: 999px; padding: 13px 8px; transition: opacity .15s; }
+  .km-buy:hover { opacity: .82; }
+  .km-buy small { display: block; margin-top: 3px; font: 9.5px var(--sans); font-weight: 400; letter-spacing: .04em; text-transform: none; opacity: .72; }
+  .km-house-official { text-align: center; font-size: 11px; color: var(--dim); text-decoration: none; letter-spacing: .02em; padding: 4px 0; }
+  .km-house-official:hover { color: var(--muted); }
+  .km-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 2px 0 0; }
+  .km-tid { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; letter-spacing: .04em; word-break: break-all; }
+  .km-foot-link { font-size: 12px; letter-spacing: .08em; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px; white-space: nowrap; }
+  .km-foot-link:hover { color: var(--txt); }
+  .km-foot-link--dim { opacity: .6; }
+
+  .km-ended { margin-top: 34px; }
+  .km-ended summary { font-family: var(--disp); font-weight: 800; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); cursor: pointer; padding: 12px 0; border-top: 1px solid var(--line2); }
+  .km-ended summary:hover { color: var(--muted); }
+  .km-grid--ended { margin-top: 14px; opacity: .55; }
+
+  .km-card--skeleton .km-sk-img { aspect-ratio: 1/1; background: rgba(255,255,255,.05); }
+  .km-card--skeleton .km-sk-body { padding: 15px 16px; display: grid; gap: 10px; }
+  .km-card--skeleton i { display: block; height: 11px; background: rgba(255,255,255,.07); }
+  .km-card--skeleton i:nth-child(2) { width: 68%; }
+  .km-card--skeleton i:nth-child(3) { width: 42%; }
+
+  .km-voices { margin-top: clamp(60px, 9vw, 110px); border-top: 1px solid var(--line); padding-top: 40px; }
+  .km-voices-title { font-family: var(--disp); font-weight: 900; font-size: clamp(26px, 4.4vw, 44px); letter-spacing: .02em; text-transform: uppercase; margin: 0 0 10px; }
+  .km-voices-note { font-size: 11px; color: var(--dim); letter-spacing: .04em; margin: 0 0 22px; }
+  .km-voices-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .km-voice { margin: 0; background: var(--surface); border: 1px solid var(--line2); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .km-voice blockquote { margin: 0; font-family: var(--disp); font-weight: 800; font-size: 13.5px; letter-spacing: .02em; color: var(--txt); }
+  .km-voice figcaption { font-size: 12px; line-height: 1.9; color: var(--muted); letter-spacing: .01em; }
+
+  .km-guide { margin-top: clamp(60px, 9vw, 110px); border-top: 1px solid var(--line); padding-top: 40px; }
+  .km-guide-title { font-family: var(--disp); font-weight: 900; font-size: clamp(26px, 4.4vw, 44px); letter-spacing: .02em; text-transform: uppercase; margin: 0 0 26px; }
+  .km-guide-steps { list-style: none; margin: 0 0 26px; padding: 0; display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 760px) { .km-guide-steps { grid-template-columns: repeat(3, 1fr); } }
+  .km-guide-steps li { background: transparent; border: 0; border-top: 1px solid var(--line); padding: 18px 4px 4px; }
+  .km-guide-n { font-family: var(--serif); font-size: 13px; color: var(--gold); letter-spacing: .2em; display: block; margin-bottom: 10px; }
+  .km-guide-steps h3 { font-family: var(--disp); font-weight: 700; font-size: 16.5px; letter-spacing: .02em; margin: 0 0 8px; }
+  .km-guide-steps p { font-size: 12.5px; line-height: 1.9; color: var(--muted); margin: 0; }
+  .km-guide-note { font-size: 12.5px; line-height: 2; color: var(--muted); margin: 0 0 12px; max-width: 86ch; }
+  .km-guide-note a { color: var(--gold); }
+  .km-guide-note--refund { color: var(--amber); }
+
+  .km-legal { margin-top: clamp(50px, 8vw, 90px); border-top: 1px solid var(--line2); padding-top: 24px; }
+  .km-legal p { font-size: 11.5px; line-height: 2; color: var(--dim); margin: 0; max-width: 92ch; }
+  .km-legal-links { margin-top: 10px !important; }
+  .km-legal-links a { color: var(--dim); text-decoration: underline; text-underline-offset: 2px; margin-right: 16px; }
+  .km-legal-links a:hover { color: var(--txt); }
+
+  /* ── モバイル可読性 ── */
+  @media (max-width: 640px) {
+    .km { padding: 0 12px calc(70px + env(safe-area-inset-bottom)); }
+    .km-cover { height: min(70vh, 560px); }
+    .km-nav-inner { gap: 12px; min-height: 52px; }
+    .km-nav-brand span { display: none; }
+    .km-nav-secondary { display: none; }
+    .km-nav-links { overflow-x: visible; }
+    .km-nav-cta { padding: 8px 14px; font-size: 10.5px; }
+    .km-hero { margin-bottom: 22px; }
+    .km-hero-title { font-size: clamp(24px, 7vw, 34px); }
+    .km-sub { font-size: 14.5px; }
+    .km-livebar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 0; }
+    .km-live, .km-ago { grid-column: auto; min-width: 0; }
+    .km-stat { display: grid; gap: 3px; padding-top: 8px; border-top: 1px solid var(--line2); }
+    .km-stat b { font-size: 18px; }
+    .km-ticker { margin-bottom: 22px; }
+    .km-fee-intro { grid-template-columns: 1fr; gap: 10px; margin-bottom: 22px; padding: 16px; }
+    .km-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .km-controls label { max-width: none; min-width: 0; }
+    .km-controls label:last-child { grid-column: 1 / -1; }
+    .km-controls select { width: 100%; min-height: 48px; font-size: 16px; }
+    .km-grid { grid-template-columns: 1fr; gap: 18px; }
+    .km-card-img { aspect-ratio: 16/10; }
+    .km-card-body { padding: 16px; gap: 12px; }
+    .km-meta { font-size: 12px; }
+    .km-buy { font-size: 16px; padding: 15px 8px; min-height: 54px; }
+    .km-tid { font-size: 11px; }
+    .km-foot-link { font-size: 13.5px; padding: 6px 0 4px; }
+    .km-legal p { font-size: 12.5px; }
+    .km-tick { font-size: 13px; }
+    .km-ago { font-size: 13px; }
+  }
+</style>

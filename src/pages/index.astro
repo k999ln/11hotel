@@ -1,0 +1,270 @@
+---
+// トップページ = 黒基調・写真主役のラグジュアリーギャラリー（2026-07-20）。
+// コンテンツは「売りホテル」= 出品中の THE KEY（NOT A HOTEL 宿泊券）。
+// - 出品データは OpenSea をサーバー側で取得（lib/opensea-stays。拠点の公式写真を優先）
+// - 表示価格は取扱料込みの総額のみ。投資・値上がり文言は使わない
+// - 出品ゼロ/取得失敗時は NOT A HOTEL 拠点プロファイルでギャラリーを維持する
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { fetchStayListings, type StayListing } from '@/lib/opensea-stays';
+import { listNotAHotelProfiles } from '@/lib/notahotel-houses';
+import Header from '@/components/home/Header.astro';
+import HeroShowcase from '@/components/home/HeroShowcase.astro';
+import IntroStatement from '@/components/home/IntroStatement.astro';
+import FeaturedHotels from '@/components/home/FeaturedHotels.astro';
+import EvaluationCriteria from '@/components/home/EvaluationCriteria.astro';
+import DestinationGallery from '@/components/home/DestinationGallery.astro';
+import MarketNote from '@/components/home/MarketNote.astro';
+import About11Hotel from '@/components/home/About11Hotel.astro';
+import MembershipCTA from '@/components/home/MembershipCTA.astro';
+import NewsList from '@/components/home/NewsList.astro';
+import Footer from '@/components/home/Footer.astro';
+
+// 出品は動きが遅いので短いエッジキャッシュのみ（価格の鮮度は詳細/購入側で担保）
+Astro.response.headers.set('Cache-Control', 'public, max-age=15, s-maxage=60, stale-while-revalidate=120');
+Astro.response.headers.set('CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+
+const apiKey = import.meta.env.OPENSEA_API_KEY;
+let listings: StayListing[] = [];
+if (apiKey) {
+  try {
+    listings = (await fetchStayListings(apiKey)).listings;
+  } catch (e) {
+    console.error('[index] fetchStayListings failed:', e instanceof Error ? e.message : e);
+  }
+}
+// チェックイン日を過ぎた出品は出さない
+const today = new Date().toISOString().slice(0, 10);
+listings = listings.filter((l) => !l.checkIn || l.checkIn >= today);
+
+// 11hotel販売価格（取扱料込み）。stay/[tokenId] と同じ計算
+const configuredFeeBps = Number(import.meta.env.KEY_SUPPORT_FEE_BPS ?? 500);
+const feeBps = Number.isFinite(configuredFeeBps) ? Math.max(0, Math.min(3000, Math.round(configuredFeeBps))) : 500;
+// 1泊あたり最低販売価格（`/vip`・`/stay/[tokenId]`と同じ基準）。V2稼働中は決済コントラクトに
+// 固定された実際の値（KEY_NIGHTLY_FLOOR_ETH）を使い、未設定時（V1）は表示のみのフォールバック
+const nightlyFloorEthRaw = String(import.meta.env.KEY_NIGHTLY_FLOOR_ETH ?? '').trim();
+const NIGHTLY_FLOOR_ETH = nightlyFloorEthRaw ? Number(nightlyFloorEthRaw) : 0.5;
+const totalEth = (l: StayListing): string | null => {
+  const p = Number(l.price);
+  if (!Number.isFinite(p) || p <= 0) return null;
+  const standardTotal = p * (1 + feeBps / 10000);
+  const floorTotal = NIGHTLY_FLOOR_ETH * (l.nights && l.nights > 0 ? l.nights : 1);
+  return (Math.round(Math.max(standardTotal, floorTotal) * 10000) / 10000).toString();
+};
+
+const placeLabel = (l: StayListing) => (l.place || l.prefecture || 'JAPAN').toUpperCase();
+const houseName = (l: StayListing) => l.house || l.name || `THE KEY #${l.tokenId}`;
+const stayLine = (l: StayListing) => {
+  const total = totalEth(l);
+  return [l.checkInLabel, l.nights ? `${l.nights} night${l.nights === 1 ? '' : 's'}` : null, total ? `${total} ETH (incl. handling)` : null]
+    .filter(Boolean).join(' · ');
+};
+
+// ヒーロー: 拠点が重複しないよう1拠点1件を選び、写真が最も見栄えする状態（公式の拠点写真が確定しているもの）
+// を優先する。listings はチェックイン日昇順なので、同一拠点内では最も近い出品が採用される。
+// 4拠点に満たない場合のみ、拠点の重複を許して残りを補う。
+const heroCandidates = listings.filter((l) => l.imageUrl);
+const seenHeroPlace = new Set<string>();
+const heroPrimary = heroCandidates.filter((l) => {
+  if (!l.property) return false; // 公式プロファイルに紐付かない = 写真の確度が低いので後回し
+  const key = (l.place || l.prefecture || l.house).toLowerCase();
+  if (seenHeroPlace.has(key)) return false;
+  seenHeroPlace.add(key);
+  return true;
+}).slice(0, 4);
+const heroFillTokens = new Set(heroPrimary.map((l) => l.tokenId));
+const heroFill = heroCandidates
+  .filter((l) => !heroFillTokens.has(l.tokenId))
+  .slice(0, Math.max(0, 4 - heroPrimary.length));
+const heroSlides = [...heroPrimary, ...heroFill].map((l) => ({
+  href: `/vip/key/${l.tokenId}`,
+  name: houseName(l),
+  areaLabel: placeLabel(l),
+  image: l.imageUrl,
+  copy: stayLine(l),
+}));
+
+// ON SALE: 価格の安い順に最大7件
+const featured = [...listings]
+  .sort((a, b) => (Number(a.price) || Infinity) - (Number(b.price) || Infinity))
+  .slice(0, 7)
+  .map((l) => {
+    const total = totalEth(l);
+    return {
+      href: `/vip/key/${l.tokenId}`,
+      name: houseName(l),
+      kicker: `${placeLabel(l)}, JAPAN · NOT A HOTEL`,
+      copy: [l.checkInLabel, l.nights ? `${l.nights} night${l.nights === 1 ? '' : 's'}` : null].filter(Boolean).join(' · ') || null,
+      price: total ? `${total} ETH · incl. handling` : null,
+      image: l.imageUrl,
+    };
+  });
+
+// DESTINATIONS: 出品を拠点ごとに集計。出品のない拠点もプロファイルで補完して最大6件
+const profiles = listNotAHotelProfiles();
+const byPlace = new Map<string, StayListing[]>();
+for (const l of listings) {
+  const key = (l.place || l.prefecture || '').toLowerCase();
+  if (!key) continue;
+  byPlace.set(key, [...(byPlace.get(key) ?? []), l]);
+}
+const listedDest = [...byPlace.entries()]
+  .sort((a, b) => b[1].length - a[1].length)
+  .map(([key, rows]) => {
+    const prof = rows[0].property;
+    const rawPlace = rows[0].place || rows[0].prefecture || '';
+    return {
+      key,
+      label: key.toUpperCase(),
+      copy: prof?.shortLabel ?? '', // 件数は gxd-badge 側に表示するため copy には含めない
+      image: rows[0].imageUrl ?? prof?.imageUrl ?? null,
+      count: rows.length,
+      // その拠点の出品一覧へ（/vip側で place パラメータを事前選択する）。1件ならそのまま詳細へ飛ばす
+      href: rows.length > 1 ? `/vip?place=${encodeURIComponent(rawPlace)}` : `/vip/key/${rows[0].tokenId}`,
+    };
+  });
+// 出品のある拠点を優先。3件に満たない場合のみ、出品なしの拠点を補って最低3件を確保する
+// （出品なし拠点は DestinationGallery 側で視覚的に弱めて表示する）
+const MIN_DESTINATIONS = 3;
+const MAX_DESTINATIONS = 6;
+const listedKeys = new Set(listedDest.map((d) => d.key));
+const needsFallback = Math.max(0, MIN_DESTINATIONS - listedDest.length);
+const fallbackDest = needsFallback === 0 ? [] : profiles
+  .filter((p) => p.imageUrl && !listedKeys.has(p.key))
+  .slice(0, needsFallback)
+  .map((p) => ({
+    key: p.key,
+    label: p.key.toUpperCase(),
+    copy: p.shortLabel,
+    image: p.imageUrl ?? null,
+    count: 0,
+    href: '/vip',
+  }));
+const destinations = [...listedDest.slice(0, MAX_DESTINATIONS), ...fallbackDest];
+
+const profileImages = profiles.map((p) => p.imageUrl).filter((v): v is string => Boolean(v));
+
+// MARKET NOTE: 現在の出品価格（取扱料込み）から最安値と中央値を算出。過去成約ではなく現在の出品のみを根拠にする
+const totalPrices = listings.map((l) => totalEth(l)).filter((v): v is string => v != null).map(Number).sort((a, b) => a - b);
+const roundEth = (n: number) => (Math.round(n * 10000) / 10000).toString();
+const marketFloor = totalPrices.length ? roundEth(totalPrices[0]) : null;
+const marketMedian = totalPrices.length
+  ? roundEth(totalPrices.length % 2 === 1
+    ? totalPrices[(totalPrices.length - 1) / 2]
+    : (totalPrices[totalPrices.length / 2 - 1] + totalPrices[totalPrices.length / 2]) / 2)
+  : null;
+const marketNoteImage = listings[0]?.imageUrl ?? profileImages[0] ?? null;
+
+// MEMBERSHIP 背景
+const membershipImage = listings[1]?.imageUrl ?? profileImages[0] ?? null;
+
+// NEWS: チェックインが近い出品を1行リスト化
+const news = listings.slice(0, 4).map((l) => {
+  const total = totalEth(l);
+  return {
+    date: l.checkIn ? l.checkIn.replaceAll('-', '.') : '—',
+    title: `${houseName(l)} (${placeLabel(l)}) now listed${total ? ` — ${total} ETH` : ''}`,
+    href: `/vip/key/${l.tokenId}`,
+  };
+});
+
+// 出品ゼロ/取得失敗時のフォールバック: 拠点プロファイルでヒーローを維持
+const fallbackSlides = profiles.filter((p) => p.imageUrl).slice(0, 4).map((p) => ({
+  href: '/vip',
+  name: p.title.replace(/^NOT A HOTEL\s*/, ''),
+  areaLabel: p.area.toUpperCase(),
+  image: p.imageUrl ?? null,
+  copy: p.shortLabel,
+}));
+const slides = heroSlides.length ? heroSlides : fallbackSlides;
+---
+
+<BaseLayout
+  title="11hotel — THE KEY Market | Choose your night at NOT A HOTEL"
+  description="Browse listed NOT A HOTEL 'THE KEY' stay keys alongside photos of each location. Prices shown are the total including handling. 11hotel supports you from purchase through activation in the official app."
+>
+  <div class="gx">
+    <Header />
+    <HeroShowcase slides={slides} ctaLabel="View this listing" />
+    <IntroStatement />
+    <FeaturedHotels items={featured} totalCount={listings.length} floorEth={marketFloor} />
+    <EvaluationCriteria />
+    <DestinationGallery destinations={destinations} />
+    <MarketNote count={listings.length} floorEth={marketFloor} medianEth={marketMedian} image={marketNoteImage} />
+    <About11Hotel />
+    <MembershipCTA image={membershipImage} />
+    {news.length > 0 && <NewsList items={news} />}
+    <Footer />
+  </div>
+</BaseLayout>
+
+<script>
+  // スクロールリビール（IntersectionObserver）。prefers-reduced-motion 時は CSS 側で無効。
+  const initReveal = () => {
+    const els = document.querySelectorAll<HTMLElement>('.gx-reveal:not(.is-bound)');
+    if (!els.length) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const el = e.target as HTMLElement;
+        const delay = el.dataset.revealDelay;
+        if (delay) el.style.transitionDelay = `${delay}ms`;
+        el.classList.add('is-in');
+        io.unobserve(el);
+      }
+    }, { threshold: 0.15, rootMargin: '0px 0px -5% 0px' });
+    els.forEach((el) => { el.classList.add('is-bound'); io.observe(el); });
+  };
+  initReveal();
+  document.addEventListener('astro:page-load', initReveal);
+</script>
+
+<style is:global>
+  /* このページでは共通ヘッダー/フッターを使わず、専用の Header / Footer を使う */
+  body:has(.gx), body:has(.gx) main { background: #080808; }
+  body:has(.gx) main { padding-top: 0; }
+  body:has(.gx) #hd { display: none; }
+  body:has(.gx) > footer { display: none; }
+
+  .gx {
+    --gx-bg: #080808;
+    --gx-bg2: #111111;
+    --gx-bg3: #171717;
+    --gx-txt: #F5F5F2;
+    --gx-sub: rgba(255, 255, 255, .62);
+    --gx-line: rgba(255, 255, 255, .14);
+    --gx-accent: #1473FF;
+    --gx-paper: #F2F1ED;
+    --gx-en: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--gx-bg);
+    color: var(--gx-txt);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Noto Sans JP', sans-serif;
+  }
+
+  .gx-label {
+    font-family: var(--gx-en);
+    font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--gx-sub); margin: 0;
+  }
+
+  .gx-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 48px; padding: 0 26px; border-radius: 999px;
+    background: #fff; color: #080808; border: 1px solid #fff;
+    font-size: 13.5px; font-weight: 600; letter-spacing: .02em;
+    text-decoration: none; cursor: pointer; transition: opacity .3s;
+  }
+  .gx-pill:hover, .gx-pill:focus-visible { opacity: .84; }
+  .gx-pill--ghost { background: transparent; color: var(--gx-txt); border-color: rgba(255,255,255,.5); }
+  .gx-pill--ghost:hover, .gx-pill--ghost:focus-visible { background: rgba(255,255,255,.08); opacity: 1; }
+
+  .gx a:focus-visible, .gx button:focus-visible, .gx input:focus-visible { outline: 2px solid var(--gx-accent); outline-offset: 3px; }
+
+  .gx-reveal {
+    opacity: 0; transform: translateY(26px);
+    transition: opacity .9s cubic-bezier(.22, 1, .36, 1), transform .9s cubic-bezier(.22, 1, .36, 1);
+  }
+  .gx-reveal.is-in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .gx-reveal { opacity: 1; transform: none; transition: none; }
+  }
+</style>

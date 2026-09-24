@@ -1,0 +1,244 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+const token = Astro.cookies.get('admin_token')?.value;
+if (token !== import.meta.env.ADMIN_TOKEN) return Astro.redirect('/admin/login?return_to=/admin/checkout-deploy');
+
+---
+
+<AdminLayout title="11hotel決済コントラクト" active="checkout-deploy">
+  <div class="co-head">
+    <h1>11hotel決済コントラクト</h1>
+    <p>接続したウォレットを利益受取先として、5%取扱料の原子的決済コントラクトをEthereumメインネットへ公開します。</p>
+  </div>
+
+  <section class="co-card">
+    <dl>
+      <div><dt>取扱料</dt><dd>5%</dd></div>
+      <div><dt>対象</dt><dd>NOT A HOTEL THE KEY</dd></div>
+      <div><dt>購入操作</dt><dd>購入者の署名1回</dd></div>
+      <div><dt>失敗時</dt><dd>仕入れ・移転・利益送金をすべて巻き戻し</dd></div>
+      <div><dt>アップグレード権限</dt><dd>なし</dd></div>
+    </dl>
+    <div class="co-warning">利益受取先になるウォレットで接続してください。秘密鍵やシードフレーズを入力する場所はありません。公開にはEthereumのガス代が必要です。</div>
+    <div class="co-actions">
+      <button type="button" class="btn" id="coConnect">MetaMaskを接続</button>
+      <button type="button" class="btn btn-primary" id="coDeploy" disabled>メインネットへ公開</button>
+    </div>
+    <p class="co-status" id="coStatus" aria-live="polite"></p>
+    <div class="co-result" id="coResult" hidden>
+      <span>公開されたコントラクト</span>
+      <code id="coAddress"></code>
+      <button type="button" class="btn" id="coCopy">アドレスをコピー</button>
+      <p>この公開アドレスを本番の <code>KEY_CHECKOUT_CONTRACT</code> に設定すると、購入ボタンが利益込みの1署名決済へ切り替わります。</p>
+    </div>
+  </section>
+
+  <section class="co-card co-card--v2">
+    <h2>V2 — 1泊あたり最低販売価格つき</h2>
+    <p class="co-v2-note">
+      出品価格＋5%の通常価格が「1泊あたり最低販売価格」を下回る場合、その差額も11hotelの利益に上乗せします。
+      値はETH建てでコントラクトに固定され、後から変更できません（管理者キー・アップグレード機能なし）。
+      為替が大きく動いた場合は新しいコントラクトを公開し直す必要があります。
+    </p>
+    <dl>
+      <div><dt>取扱料</dt><dd>5%</dd></div>
+      <div><dt>対象</dt><dd>NOT A HOTEL THE KEY</dd></div>
+      <div><dt>アップグレード権限</dt><dd>なし</dd></div>
+    </dl>
+    <label class="co-field">
+      <span>1泊あたり最低販売価格（ETH）</span>
+      <input type="number" id="coFloorEth" value="0.5" min="0" step="0.001" />
+    </label>
+    <label class="co-field">
+      <span>利益受取先アドレス（空欄なら接続したウォレット自身）</span>
+      <input type="text" id="coTreasuryV2" placeholder="0x… 空欄でも可" />
+    </label>
+    <p class="co-v2-note">
+      公開トランザクションに署名する（＝ガス代を払う）ウォレットと、利益を受け取り続けるウォレットは別にできます。
+      ガス代用の小さな別ウォレットで接続し、ここに本命の受取先アドレスを入力すれば、
+      受取先ウォレット自体は一度も署名・送金することなく、以後の購入ごとに自動で利益を受け取るだけになります。
+    </p>
+    <div class="co-warning">秘密鍵やシードフレーズを入力する場所はありません。公開にはEthereumのガス代が必要です。値の間違いは公開後に修正できません。</div>
+    <div class="co-actions">
+      <button type="button" class="btn" id="coConnectV2">MetaMaskを接続（ガス代を払うウォレット）</button>
+      <button type="button" class="btn btn-primary" id="coDeployV2" disabled>V2をメインネットへ公開</button>
+    </div>
+    <p class="co-status" id="coStatusV2" aria-live="polite"></p>
+    <div class="co-result" id="coResultV2" hidden>
+      <span>公開されたV2コントラクト</span>
+      <code id="coAddressV2"></code>
+      <button type="button" class="btn" id="coCopyV2">アドレスをコピー</button>
+      <p>この公開アドレスを本番の <code>KEY_CHECKOUT_CONTRACT</code> に設定し、<code>market.ts</code> / <code>fulfill.ts</code> / <code>KeyMarketBoard.astro</code> をV2の見積・照合ロジックへ切り替えると、下限つきの決済に切り替わります（現時点では未接続）。</p>
+    </div>
+  </section>
+</AdminLayout>
+
+<script>
+  import { encodeDeployData } from 'viem';
+  import artifact from '@/generated/checkout-artifact.json';
+
+  const collection = '0xf3f8257fbcfdeff9354b6a0e1a948f7a5ff135a2';
+  const settlements = [
+    '0x0000000000000068f116a894984e2db1123eb395',
+    '0x00000000000000adc04c56bf30ac9d3c0aaf14dc',
+  ];
+
+  const connect = document.querySelector<HTMLButtonElement>('#coConnect')!;
+  const deploy = document.querySelector<HTMLButtonElement>('#coDeploy')!;
+  const status = document.querySelector<HTMLElement>('#coStatus')!;
+  const result = document.querySelector<HTMLElement>('#coResult')!;
+  const addressOut = document.querySelector<HTMLElement>('#coAddress')!;
+  let account = '';
+
+  const setStatus = (text: string, bad = false) => {
+    status.textContent = text;
+    status.classList.toggle('is-bad', bad);
+  };
+
+  async function ensureMainnet() {
+    const eth = (window as any).ethereum;
+    const chain = await eth.request({ method: 'eth_chainId' });
+    if (chain === '0x1') return;
+    await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] });
+  }
+
+  connect?.addEventListener('click', async () => {
+    const eth = (window as any).ethereum;
+    if (!eth) { setStatus('MetaMaskが見つかりません。MetaMask内ブラウザで開いてください。', true); return; }
+    try {
+      await ensureMainnet();
+      const accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[];
+      account = accounts?.[0] || '';
+      if (!account) return;
+      connect.textContent = `${account.slice(0, 7)}…${account.slice(-5)}`;
+      deploy.disabled = false;
+      setStatus('接続済み。このアドレスが11hotel利益の受取先になります。');
+    } catch (e: any) { setStatus(e?.message || '接続をキャンセルしました。', true); }
+  });
+
+  deploy?.addEventListener('click', async () => {
+    const eth = (window as any).ethereum;
+    if (!account || !eth) return;
+    deploy.disabled = true;
+    try {
+      await ensureMainnet();
+      const data = encodeDeployData({
+        abi: artifact.abi,
+        bytecode: artifact.bytecode as `0x${string}`,
+        args: [account, collection, 500, settlements],
+      });
+      setStatus('MetaMaskで公開トランザクションを確認してください…');
+      const hash = await eth.request({ method: 'eth_sendTransaction', params: [{ from: account, data }] }) as string;
+      setStatus(`送信済み ${hash.slice(0, 12)}… 確定を待っています。`);
+      let receipt: { contractAddress?: string; status?: string } | null = null;
+      for (let i = 0; i < 90 && !receipt; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        receipt = await eth.request({ method: 'eth_getTransactionReceipt', params: [hash] });
+      }
+      if (!receipt?.contractAddress || receipt.status !== '0x1') throw new Error('公開を確認できませんでした。Etherscanで取引を確認してください。');
+      addressOut.textContent = receipt.contractAddress;
+      result.hidden = false;
+      setStatus('公開完了。コントラクトアドレスを本番設定へ登録してください。');
+    } catch (e: any) {
+      setStatus(e?.code === 4001 ? '公開をキャンセルしました。' : (e?.message || '公開に失敗しました。'), true);
+      deploy.disabled = false;
+    }
+  });
+
+  document.getElementById('coCopy')?.addEventListener('click', async () => {
+    if (addressOut.textContent) await navigator.clipboard.writeText(addressOut.textContent);
+  });
+
+  // ── V2（1泊あたり最低販売価格つき） ──
+  import artifactV2 from '@/generated/checkout-v2-artifact.json';
+  import { parseEther } from 'viem';
+
+  const connectV2 = document.querySelector<HTMLButtonElement>('#coConnectV2')!;
+  const deployV2 = document.querySelector<HTMLButtonElement>('#coDeployV2')!;
+  const statusV2 = document.querySelector<HTMLElement>('#coStatusV2')!;
+  const resultV2 = document.querySelector<HTMLElement>('#coResultV2')!;
+  const addressOutV2 = document.querySelector<HTMLElement>('#coAddressV2')!;
+  const floorEthInput = document.querySelector<HTMLInputElement>('#coFloorEth')!;
+  const treasuryInput = document.querySelector<HTMLInputElement>('#coTreasuryV2')!;
+  const ADDR_RE_V2 = /^0x[0-9a-fA-F]{40}$/;
+  let accountV2 = '';
+
+  const setStatusV2 = (text: string, bad = false) => {
+    statusV2.textContent = text;
+    statusV2.classList.toggle('is-bad', bad);
+  };
+
+  connectV2?.addEventListener('click', async () => {
+    const eth = (window as any).ethereum;
+    if (!eth) { setStatusV2('MetaMaskが見つかりません。MetaMask内ブラウザで開いてください。', true); return; }
+    try {
+      await ensureMainnet();
+      const accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[];
+      accountV2 = accounts?.[0] || '';
+      if (!accountV2) return;
+      connectV2.textContent = `${accountV2.slice(0, 7)}…${accountV2.slice(-5)}`;
+      deployV2.disabled = false;
+      setStatusV2('接続済み（ガス代を払うウォレット）。受取先アドレスを空欄にすると、このウォレットが利益受取先になります。');
+    } catch (e: any) { setStatusV2(e?.message || '接続をキャンセルしました。', true); }
+  });
+
+  deployV2?.addEventListener('click', async () => {
+    const eth = (window as any).ethereum;
+    if (!accountV2 || !eth) return;
+    let perNightFloorWei: bigint;
+    try {
+      perNightFloorWei = parseEther(floorEthInput.value || '0');
+      if (perNightFloorWei <= 0n) throw new Error('invalid');
+    } catch { setStatusV2('1泊あたり最低販売価格が正しくありません。', true); return; }
+
+    const treasuryRaw = treasuryInput.value.trim();
+    const treasury = treasuryRaw ? treasuryRaw : accountV2;
+    if (!ADDR_RE_V2.test(treasury)) { setStatusV2('受取先アドレスの形式が正しくありません（0xで始まる42文字）。', true); return; }
+
+    deployV2.disabled = true;
+    try {
+      await ensureMainnet();
+      const data = encodeDeployData({
+        abi: artifactV2.abi,
+        bytecode: artifactV2.bytecode as `0x${string}`,
+        args: [treasury, collection, 500, perNightFloorWei, settlements],
+      });
+      setStatusV2(`公開準備: 1泊あたり ${floorEthInput.value} ETH・受取先 ${treasury.slice(0, 7)}…${treasury.slice(-5)}。MetaMaskで公開トランザクションを確認してください…`);
+      const hash = await eth.request({ method: 'eth_sendTransaction', params: [{ from: accountV2, data }] }) as string;
+      setStatusV2(`送信済み ${hash.slice(0, 12)}… 確定を待っています。`);
+      let receipt: { contractAddress?: string; status?: string } | null = null;
+      for (let i = 0; i < 90 && !receipt; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        receipt = await eth.request({ method: 'eth_getTransactionReceipt', params: [hash] });
+      }
+      if (!receipt?.contractAddress || receipt.status !== '0x1') throw new Error('公開を確認できませんでした。Etherscanで取引を確認してください。');
+      addressOutV2.textContent = receipt.contractAddress;
+      resultV2.hidden = false;
+      setStatusV2('公開完了。コントラクトアドレスを本番設定へ登録してください。');
+    } catch (e: any) {
+      setStatusV2(e?.code === 4001 ? '公開をキャンセルしました。' : (e?.message || '公開に失敗しました。'), true);
+      deployV2.disabled = false;
+    }
+  });
+
+  document.getElementById('coCopyV2')?.addEventListener('click', async () => {
+    if (addressOutV2.textContent) await navigator.clipboard.writeText(addressOutV2.textContent);
+  });
+</script>
+
+<style>
+  .co-head{margin-bottom:22px}.co-head h1{font-size:22px;margin:0 0 6px}.co-head p{color:var(--c-text2);font-size:13px;max-width:760px}
+  .co-card{max-width:780px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:8px;padding:22px}
+  .co-card dl{margin:0 0 18px}.co-card dl div{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid var(--c-border2)}
+  .co-card dt{color:var(--c-text2)}.co-card dd{margin:0;text-align:right}
+  .co-warning{padding:13px;border:1px solid rgba(251,146,60,.35);background:rgba(251,146,60,.08);color:var(--c-orange);font-size:12px;line-height:1.8}
+  .co-actions{display:flex;gap:9px;margin-top:18px}.co-status{min-height:24px;margin:14px 0 0;color:var(--c-green);font-size:12px}.co-status.is-bad{color:var(--c-red)}
+  .co-result{margin-top:18px;padding:16px;background:var(--c-bg);border:1px solid var(--c-border)}.co-result>span{display:block;color:var(--c-text2);font-size:11px}.co-result>code{display:block;margin:7px 0 12px;word-break:break-all;color:var(--c-green)}.co-result p{margin:14px 0 0;color:var(--c-text2);font-size:12px;line-height:1.8}
+  @media(max-width:640px){.co-card{padding:16px}.co-card dl div{display:grid;gap:4px}.co-card dd{text-align:left}.co-actions{display:grid}.co-actions .btn{min-height:46px;justify-content:center}}
+  .co-card--v2{margin-top:22px}
+  .co-card--v2 h2{font-size:16px;margin:0 0 10px}
+  .co-v2-note{color:var(--c-text2);font-size:12.5px;line-height:1.8;margin:0 0 16px}
+  .co-field{display:flex;flex-direction:column;gap:6px;max-width:280px;margin:0 0 16px;font-size:12px;color:var(--c-text2)}
+  .co-field input{font-size:14px;padding:9px 11px;background:var(--c-bg);border:1px solid var(--c-border);border-radius:6px;color:inherit}
+</style>

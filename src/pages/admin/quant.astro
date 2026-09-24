@@ -1,0 +1,26 @@
+---
+/**
+ * Quant Admin — overview / ledger / risk / AI / learning / design.
+ * Auth: ADMIN_TOKEN cookie. Same /api/ai bridge as /ai.
+ */
+import QuantAdminDesk from '../../components/ai/QuantAdminDesk.astro';
+import '../../styles/ai-desk.css';
+
+const token = Astro.cookies.get('admin_token')?.value;
+if (token !== import.meta.env.ADMIN_TOKEN) {
+  return Astro.redirect('/admin/login?return_to=/admin/quant');
+}
+---
+<!doctype html>
+<html lang="ja" data-api-base="/api/ai" data-remote="true" data-desk-mode="admin">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Quant Admin · 11hotel</title>
+  </head>
+  <body>
+    <QuantAdminDesk />
+    <script src="/ai/ai-desk.js" defer></script>
+  </body>
+</html>

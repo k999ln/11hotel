@@ -1,0 +1,207 @@
+---
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+  structuredData?: object[];
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description = 'A record of hotels and restaurants for dates and anniversaries — a quiet collection of places first shared on social media. Photo sessions and private inquiries welcome.',
+  ogImage,
+  canonicalUrl = new URL(Astro.url.pathname, 'https://11hotel.vip').href,
+  structuredData,
+  noindex = false,
+} = Astro.props;
+
+const siteTitle = `${title} | いいhotel`;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800;900&family=Shippori+Mincho:wght@400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800;900&family=Shippori+Mincho:wght@400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800;900&family=Shippori+Mincho:wght@400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" /></noscript>
+  <title>{siteTitle}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalUrl} />
+  <meta name="robots" content={noindex ? 'noindex,nofollow' : 'index,follow'} />
+  <meta name="theme-color" content="#f7f4ef" />
+  <meta property="og:title" content={siteTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonicalUrl} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="いいhotel" />
+  <meta property="og:locale" content="en_US" />
+  {ogImage && <meta property="og:image" content={ogImage} />}
+  {ogImage && <meta property="og:image:width" content="1200" />}
+  {ogImage && <meta property="og:image:height" content="630" />}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@kirin41" />
+  <meta name="twitter:title" content={siteTitle} />
+  <meta name="twitter:description" content={description} />
+  {ogImage && <meta name="twitter:image" content={ogImage} />}
+  <link rel="alternate" hreflang="en" href={canonicalUrl} />
+  <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
+  <script is:inline type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "いいhotel",
+    "url": "https://11hotel.vip",
+    "description": "Hospitality media for two. Design reviews, restaurant routes, and private access in Japan.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "いいhotel",
+      "sameAs": ["https://www.instagram.com/kirin.41/", "https://www.tiktok.com/@kirin.41"]
+    }
+  })} />
+  {structuredData?.map(sd => <script is:inline type="application/ld+json" set:html={JSON.stringify(sd)} />)}
+  <ClientRouter />
+  {import.meta.env.GA_MEASUREMENT_ID && (
+    <>
+      <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.GA_MEASUREMENT_ID}`} />
+      <script is:inline define:vars={{ gaId: import.meta.env.GA_MEASUREMENT_ID }}>
+        window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+        if(!window.__gaBound){
+          window.__gaBound=true;
+          const maskPath=(p)=>p;
+          gtag('js',new Date());
+          gtag('config',gaId,{send_page_view:false});
+          document.addEventListener('astro:page-load',()=>{
+            // utm_* / fbclid を GA の流入判定に使えるよう query は残す（トークンは path 側のみ）
+            gtag('event','page_view',{
+              page_path:maskPath(location.pathname),
+              page_location:location.origin+maskPath(location.pathname)+location.search,
+              page_title:document.title,
+            });
+          });
+        }
+      </script>
+    </>
+  )}
+  <style>
+    #hd {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 56px; background: transparent;
+      display: flex; align-items: center; padding: 0 24px;
+      pointer-events: none;
+    }
+    .hd-logo {
+      pointer-events: auto;
+      text-decoration: none;
+      display: flex; flex-direction: column; align-items: center;
+      line-height: 1; gap: 4px;
+      filter: drop-shadow(0 1px 6px rgba(0,0,0,.45));
+    }
+    .hd-logo-ii {
+      font-family: 'Shippori Mincho','Hiragino Mincho ProN',serif;
+      font-size: 22px; font-weight: 400; letter-spacing: .08em; color: #fff;
+    }
+    .hd-logo-en {
+      font-family: 'Cormorant Garamond',Georgia,serif;
+      font-size: 9px; font-weight: 400; letter-spacing: .3em;
+      color: rgba(255,255,255,.72); text-transform: lowercase;
+    }
+    main { padding-top: 56px; }
+    footer {
+      margin-top: 96px;
+      border-top: 1px solid var(--border);
+      padding: 64px 24px 56px;
+      background: var(--bg-2);
+      text-align: center;
+    }
+    .ft-inner {
+      max-width: 600px; margin: 0 auto;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .ft-logo {
+      display: inline-flex; flex-direction: column; align-items: center;
+      line-height: 1; gap: 6px; text-decoration: none;
+    }
+    .ft-logo-ii {
+      font-family: 'Shippori Mincho','Hiragino Mincho ProN',serif;
+      font-size: 32px; font-weight: 400; letter-spacing: .08em; color: var(--ink);
+    }
+    .ft-logo-en {
+      font-family: 'Cormorant Garamond',Georgia,serif;
+      font-size: 10px; font-weight: 300; letter-spacing: .4em;
+      color: var(--ink-3); text-transform: lowercase;
+    }
+    .ft-links {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 8px 24px; margin-bottom: 32px;
+    }
+    .ft-links a { font-size: 11px; color: var(--ink-2); text-decoration: none; letter-spacing: .04em; }
+    .ft-links a:hover { color: var(--ink); }
+    .ft-copy {
+      width: 100%; font-size: 10px; color: var(--ink-3);
+      padding-top: 24px; border-top: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <header id="hd">
+    <a href="/" class="hd-logo">
+      <span class="hd-logo-ii">いい</span>
+      <span class="hd-logo-en">hotel</span>
+    </a>
+  </header>
+
+  <main><slot /></main>
+
+  <footer>
+    <div class="ft-inner">
+      <a href="/" class="ft-logo">
+        <span class="ft-logo-ii">いい</span>
+        <span class="ft-logo-en">hotel</span>
+      </a>
+      <p class="ft-copy">
+        <span>© 2026 いいhotel. Operated by @kirin.41</span>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // 流入元（utm_* / クリックID）の first-touch を保存し、相談・購入ログへ付与する。
+    // 個人情報は含まない。30日で失効し、新しい流入パラメータが来たときのみ上書きする。
+    const _ATTR_KEY = 'iih_attr_first';
+    const _ATTR_TTL_MS = 30 * 24 * 3600 * 1000;
+    const _ATTR_PARAMS = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','ttclid','gclid','source','campaign'];
+    try {
+      const q = new URLSearchParams(location.search);
+      const found: Record<string, string> = {};
+      for (const k of _ATTR_PARAMS) { const v = q.get(k); if (v) found[k] = v.slice(0, 200); }
+      if (Object.keys(found).length) {
+        let fresh = false;
+        try {
+          const prev = JSON.parse(localStorage.getItem(_ATTR_KEY) ?? 'null');
+          fresh = Boolean(prev?.captured_at) && Date.now() - Date.parse(prev.captured_at) < _ATTR_TTL_MS;
+        } catch {}
+        if (!fresh) {
+          localStorage.setItem(_ATTR_KEY, JSON.stringify({
+            ...found, landing_page: location.pathname, captured_at: new Date().toISOString(),
+          }));
+        }
+      }
+    } catch {}
+    (window as any).__attr = (): Record<string, string> | null => {
+      try {
+        const raw = JSON.parse(localStorage.getItem(_ATTR_KEY) ?? 'null');
+        if (!raw?.captured_at || Date.now() - Date.parse(raw.captured_at) > _ATTR_TTL_MS) return null;
+        return raw;
+      } catch { return null; }
+    };
+  </script>
+</body>
+</html>

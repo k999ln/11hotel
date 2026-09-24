@@ -1,0 +1,185 @@
+---
+// MY KEYS — 所有しているTHE KEYの確認ページ（購入導線から分離）。
+// ウォレットは読み取り接続のみ（署名・送金は発生しない）。相場の目安は /api/vip/market を1回参照。
+import { t, type Lang } from '@/lib/i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+
+const dict = {
+  ja: {
+    eyebrow: 'NOT A HOTEL — THE KEY',
+    title: 'MY KEYS',
+    lead: 'ウォレットを読み取り専用で接続すると、所有しているTHE KEYと現在の相場の目安を表示します。接続だけでは署名・送金は一切発生しません。',
+    switchLabel: 'EN',
+    backLabel: '← マーケットに戻る',
+    connect: 'ウォレットを接続',
+    note: '売却する場合の出品・価格設定・約定は外部マーケットで行われます。相場の目安は概算であり、売却・価格を保証しません。',
+  },
+  en: {
+    eyebrow: 'NOT A HOTEL — THE KEY',
+    title: 'MY KEYS',
+    lead: 'Connect your wallet read-only to see the KEYs you hold with current market ranges. Connecting alone never signs or sends anything.',
+    switchLabel: '日本語',
+    backLabel: '← Back to market',
+    connect: 'Connect wallet',
+    note: 'Listing, pricing and settlement for sales happen on an external marketplace. Market ranges are approximations; sale and price are not guaranteed.',
+  },
+};
+
+const d = t(dict, lang);
+const backHref = '/vip';
+---
+
+<div class="mk" data-lang={lang}>
+  <header class="mk-hero">
+    <div class="mk-top">
+      <p class="mk-eyebrow">{d.eyebrow}</p>
+      <span class="mk-links">
+        <a class="mk-lang" href={backHref}>{d.backLabel}</a>
+      </span>
+    </div>
+    <h1 class="mk-title">{d.title}</h1>
+    <p class="mk-lead">{d.lead}</p>
+    <button type="button" class="mk-connect" id="mkConnect">{d.connect}</button>
+    <p class="mk-status" id="mkStatus" hidden></p>
+  </header>
+  <div class="mk-grid" id="mkGrid"></div>
+  <p class="mk-note">{d.note}</p>
+</div>
+
+<script>
+  const STR = {
+    ja: {
+      connecting: 'ウォレット接続中…',
+      noWallet: 'ウォレットが見つかりません。スマホの方はMetaMaskアプリ内ブラウザでこのページを開いてください',
+      openInMm: 'MetaMaskアプリで開く ↗',
+      noKeys: 'このウォレットにTHE KEYは見つかりませんでした。',
+      keysFound: (n: number) => `${n}件のキーを所有しています`,
+      estBand: '現在の相場の目安',
+      sellOs: '外部マーケットで出品 ↗',
+      failed: '照会に失敗しました',
+    },
+    en: {
+      connecting: 'Connecting wallet…',
+      noWallet: 'No wallet found. On mobile, open this page inside the MetaMask app browser',
+      openInMm: 'Open in MetaMask ↗',
+      noKeys: 'No THE KEY found in this wallet.',
+      keysFound: (n: number) => `You hold ${n} key${n === 1 ? '' : 's'}`,
+      estBand: 'Current market range',
+      sellOs: 'List externally ↗',
+      failed: 'Lookup failed',
+    },
+  } as const;
+
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+  const fmt = (n: number | null | undefined) =>
+    n == null || !isFinite(n) ? '—' : (Math.round(n * 1000) / 1000).toString();
+
+  const initKeys = () => {
+    const root = document.querySelector<HTMLElement>('.mk');
+    if (!root || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+    const lang = (root.dataset.lang === 'en' ? 'en' : 'ja') as 'ja' | 'en';
+    const s = STR[lang];
+    const btn = document.getElementById('mkConnect') as HTMLButtonElement;
+    const status = document.getElementById('mkStatus')!;
+    const grid = document.getElementById('mkGrid')!;
+
+    btn.addEventListener('click', async () => {
+      const eth = (window as any).ethereum;
+      status.hidden = false;
+      if (!eth) {
+        const dapp = `metamask.app.link/dapp/${location.host}${location.pathname}`;
+        status.innerHTML = `${esc(s.noWallet)} — <a href="https://${esc(dapp)}" rel="noopener noreferrer">${esc(s.openInMm)}</a>`;
+        return;
+      }
+      btn.disabled = true;
+      status.textContent = s.connecting;
+      try {
+        const accounts = await eth.request({ method: 'eth_requestAccounts' }) as string[];
+        const address = accounts?.[0];
+        if (!address) throw new Error('no account');
+        const [keysRes, marketRes] = await Promise.all([
+          fetch('/api/vip/my-keys', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress: address }),
+          }),
+          fetch('/api/vip/market', { headers: { accept: 'application/json' } }).catch(() => null),
+        ]);
+        const data = await keysRes.json() as { nfts?: Array<{ tokenId: string; name: string; imageUrl: string | null; openseaUrl: string }>; error?: string };
+        if (!keysRes.ok || data.error) throw new Error('lookup');
+        const market = marketRes && marketRes.ok
+          ? await marketRes.json() as { floor: number | null; recentSaleMedian: number | null; ethJpy: number | null; nightlyFloorEth?: number | null } : null;
+
+        const nfts = data.nfts ?? [];
+        if (nfts.length === 0) { status.textContent = s.noKeys; grid.innerHTML = ''; return; }
+        status.textContent = s.keysFound(nfts.length);
+
+        // 1泊あたり最低販売価格（`/vip`の購入導線と同じ基準）を下限とし、
+        // 相場がそれ以上ならそのまま、下回ればこの値を目安として示す
+        const NIGHTLY_FLOOR_ETH = market?.nightlyFloorEth ?? 0.5;
+        const rawLo = market?.floor != null ? Math.round(market.floor * 0.9 * 1000) / 1000 : null;
+        const rawHi = market?.recentSaleMedian ?? market?.floor ?? null;
+        const lo = rawLo != null ? Math.max(rawLo, NIGHTLY_FLOOR_ETH) : null;
+        const hi = rawHi != null ? Math.max(rawHi, NIGHTLY_FLOOR_ETH) : null;
+        let band = lo != null && hi != null ? `${fmt(lo)}–${fmt(Math.max(lo, hi))} ETH` : '—';
+        if (band !== '—' && market?.ethJpy != null && hi != null) {
+          band += `（〜≈¥${Math.round(Math.max(lo!, hi) * market.ethJpy).toLocaleString('ja-JP')}）`;
+        }
+        grid.innerHTML = nfts.map((n) => `<article class="mk-card">
+          ${n.imageUrl ? `<img src="${esc(n.imageUrl)}" alt="${esc(n.name)}" loading="lazy">` : '<span class="mk-noimg"></span>'}
+          <div>
+            <h3>${esc(n.name || `THE KEY #${n.tokenId}`)}</h3>
+            <p class="mk-lbl">${s.estBand}</p>
+            <strong class="mk-band">${esc(band)}</strong>
+            <a href="${esc(n.openseaUrl)}/sell" target="_blank" rel="noopener noreferrer" class="mk-sell">${s.sellOs}</a>
+          </div>
+        </article>`).join('');
+      } catch {
+        status.textContent = s.failed;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  };
+
+  initKeys();
+  document.addEventListener('astro:page-load', initKeys);
+</script>
+
+<style is:global>
+  body:has(.mk) { background: #0e0d0b; }
+  .mk {
+    --bg: #0e0d0b; --surface: #16140f; --line: rgba(236,232,225,.1); --line2: rgba(236,232,225,.06);
+    --txt: #ece8e1; --muted: #a49e93; --dim: #7d786f; --gold: #1473FF;
+    --disp: 'Helvetica Neue', Helvetica, Arial, 'Inter', sans-serif; --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'Inter', -apple-system, 'Noto Sans JP', sans-serif;
+    max-width: 900px; margin: 0 auto; padding: clamp(24px, 4vw, 44px) clamp(16px, 4vw, 44px) 90px;
+    color: var(--txt); font-family: var(--sans); min-height: 70vh;
+  }
+  .mk-top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .mk-links { display: inline-flex; gap: 8px; }
+  .mk-eyebrow { font-family: var(--serif); font-size: 12px; letter-spacing: .38em; text-transform: uppercase; color: var(--gold); margin: 0 0 14px; }
+  .mk-lang { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); text-decoration: none; border: 1px solid var(--line); padding: 6px 14px; transition: all .2s; white-space: nowrap; }
+  .mk-lang:hover { color: var(--txt); border-color: var(--muted); }
+  .mk-title { font-family: var(--disp); font-weight: 900; font-size: clamp(48px, 10vw, 110px); line-height: .95; letter-spacing: .01em; text-transform: uppercase; margin: 0 0 16px; }
+  .mk-lead { font-size: 13.5px; line-height: 2; color: var(--muted); margin: 0 0 24px; max-width: 58ch; }
+  .mk-connect { font-family: var(--disp); font-weight: 700; font-size: 13.5px; letter-spacing: .03em; text-transform: none;
+    background: #fff; color: #14120d; border: 1px solid #fff; border-radius: 999px; padding: 14px 34px; cursor: pointer; transition: opacity .3s; }
+  .mk-connect:hover { opacity: .84; filter: none; }
+  .mk-connect:disabled { opacity: .55; cursor: wait; }
+  .mk-status { font-size: 13px; color: var(--muted); margin: 16px 0 0; line-height: 1.8; }
+  .mk-status a { color: var(--gold); }
+  .mk-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 28px; }
+  @media (min-width: 700px) { .mk-grid { grid-template-columns: repeat(2, 1fr); } }
+  .mk-card { display: flex; gap: 16px; background: var(--surface); border: 1px solid var(--line2); padding: 16px; align-items: center; }
+  .mk-card img, .mk-noimg { width: 84px; height: 84px; object-fit: cover; flex-shrink: 0; background: rgba(236,232,225,.06); }
+  .mk-card h3 { font-family: var(--disp); font-weight: 800; font-size: 16px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 8px; }
+  .mk-lbl { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin: 0 0 3px; }
+  .mk-band { font-family: var(--sans); font-weight: 600; font-size: 16px; font-variant-numeric: lining-nums tabular-nums; display: block; margin-bottom: 9px; }
+  .mk-sell { font-size: 12.5px; letter-spacing: .06em; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+  .mk-sell:hover { color: var(--txt); }
+  .mk-note { margin-top: 40px; border-top: 1px solid var(--line2); padding-top: 20px; font-size: 11.5px; line-height: 2; color: var(--dim); }
+</style>

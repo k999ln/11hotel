@@ -1,0 +1,8 @@
+---
+// 共有・ブックマーク用の読みやすいURL。実体は /vip?token=... の既存挙動（KeyMarketBoard.astro の
+// クライアント側 location.search 読み取り）にそのままリダイレクトする。/vip/[id].astro（Hospitality用の
+// 既存ルート）と衝突しないよう、あえて /vip/key/[tokenId] という別セグメントにしている。
+const { tokenId } = Astro.params;
+if (!tokenId || !/^\d+$/.test(tokenId)) return Astro.redirect('/vip');
+return Astro.redirect(`/vip?token=${encodeURIComponent(tokenId)}`, 301);
+---

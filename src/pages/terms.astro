@@ -1,0 +1,202 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+const updated = '2026-07-30';
+const articles = [
+  {
+    title: 'Scope',
+    body: [
+      'These Terms of Service set out the conditions of use for the website operated by 11hotel ("this site"), the THE KEY market (listings and purchase functionality), the purchase-inquiry form, and other related services.',
+      'By using this site, you are deemed to agree to these Terms and to our <a href="/privacy">Privacy Policy</a>.',
+    ],
+  },
+  {
+    title: 'What this site is',
+    body: [
+      'This site is a market that organizes and compares public listings of NOT A HOTEL "THE KEY" stay keys (NFTs), and lets buyers purchase directly from their own crypto wallet. We also take purchase inquiries when you would like to ask before buying.',
+      'This site does not operate as a travel agency, does not confirm hotel reservations, does not manage itineraries, does not broker real estate, and does not provide investment advice or solicit asset-management business. THE KEY is a stay key, not an investment product. We do not guarantee or promote price appreciation, yield, or resale profit.',
+    ],
+  },
+  {
+    title: 'Listed information',
+    body: [
+      'Listing details (price, check-in date, nights, availability, etc.) reflect the state of the external market (OpenSea) at the time they were fetched. Price, sale status, or availability may change between when you view a listing and when you complete a purchase. This site re-verifies listing details server-side immediately before a purchase, but does not guarantee the completeness or currency of displayed information.',
+    ],
+  },
+  {
+    title: 'THE KEY stay keys and wallet payment',
+    body: [
+      'This site organizes publicly listed NOT A HOTEL "THE KEY" stay keys and provides a payment function usable directly from the buyer\'s own crypto wallet. The displayed "11hotel price" includes 11hotel\'s handling fee (and, where a per-night minimum sale price floor applies, the resulting difference). Gas fees are borne separately by the buyer.',
+      'A purchase executes the acquisition of the stay key, its transfer to the buyer\'s wallet, and payment of 11hotel\'s handling fee as a single transaction through a payment contract on Ethereum. If any step fails, the purchase amount and handling fee are not transferred, but the gas fee paid to the network may not be refunded.',
+      'Transactions submitted to the blockchain generally cannot be cancelled, changed, or refunded. This site does not guarantee that a listing will remain available, that a transaction will complete, processing time, cryptocurrency prices, the market value of the NFT, the validity of the stay right, availability, or acceptance by NOT A HOTEL. Before purchasing, confirm the HOUSE, check-in date, nights, capacity, conditions of use, and NOT A HOTEL\'s official terms.',
+      '11hotel does not continue to hold the purchase funds or the NFT after a transaction completes, and never obtains your private key or seed phrase. Wallet custody, misdirected transfers, unauthorized use by third parties, and tax treatment remain the user\'s own responsibility.',
+    ],
+  },
+  {
+    title: 'Purchase inquiries',
+    body: [
+      'Submitting the purchase-inquiry form does not constitute an offer to purchase or the formation of a contract. We review and reply to submissions at our own discretion, and a reply or follow-up is not guaranteed.',
+    ],
+  },
+  {
+    title: 'Prohibited conduct',
+    list: [
+      'Reproducing or republishing this site\'s content without authorization',
+      'Submitting false information, impersonation, or unauthorized access',
+      'Excessive access to or use of the payment contract/API as a stepping stone for other activity',
+      'Conduct that violates law or public order and morals',
+      'Conduct that interferes with the operation of this site',
+    ],
+  },
+  { title: 'Intellectual property', body: ['Rights in this site\'s content belong to this site or to their rightful owners.'] },
+  {
+    title: 'Disclaimer',
+    body: [
+      'Except in cases of intent or gross negligence, this site is not liable with respect to listed information, use of external services (OpenSea, the Ethereum network, etc.), or whether a purchase inquiry is responded to. Any transaction or dispute arising between a user and a third party (NOT A HOTEL, a seller, etc.) is to be resolved between those parties.',
+    ],
+  },
+  {
+    title: 'Changes to these Terms',
+    body: ['We may change these Terms as needed. Material changes will be announced on this site. Continued use after a change constitutes agreement to the revised Terms.'],
+  },
+  {
+    title: 'Governing law and jurisdiction',
+    body: ['These Terms are governed by the laws of Japan. Any dispute shall be subject to the exclusive agreed jurisdiction of the court having jurisdiction over the operator\'s location as the court of first instance.'],
+  },
+];
+---
+
+<BaseLayout
+  title="Terms of Service"
+  description="11hotel's Terms of Service — conditions of use for THE KEY market, wallet payment, purchase inquiries, and disclaimers."
+>
+<div class="gx legal-doc">
+  <nav class="ld-nav">
+    <a class="ld-logo" href="/"><span class="ld-logo-ii">いい</span><span class="ld-logo-en">hotel</span></a>
+    <a class="ld-back" href="/vip">Back to Market</a>
+  </nav>
+
+  <header class="ld-hero gx-reveal">
+    <p class="gx-label">Terms of Service</p>
+    <h1 class="ld-title">Terms of Service</h1>
+    <p class="ld-date">Last updated — {updated}</p>
+  </header>
+
+  <ol class="ld-list">
+    {articles.map((a, i) => (
+      <li class="gx-reveal" data-reveal-delay={String(Math.min(i, 6) * 40)}>
+        <span class="ld-no">{String(i + 1).padStart(2, '0')}</span>
+        <div class="ld-article-body">
+          <h2>{a.title}</h2>
+          {a.body?.map((p) => <p set:html={p} />)}
+          {a.list && (
+            <ul>{a.list.map((li) => <li>{li}</li>)}</ul>
+          )}
+        </div>
+      </li>
+    ))}
+  </ol>
+
+  <section class="ld-operator gx-reveal">
+    <p class="gx-label">Operator</p>
+    <dl class="ld-info">
+      <div><dt>Operator</dt><dd>11hotel (independently operated)</dd></div>
+      <div><dt>Address</dt><dd>42 Broadway, Suite 12-534, New York, NY 10004-1617, USA</dd></div>
+      <div><dt>Contact</dt><dd>Instagram DM <a href="https://www.instagram.com/kirin.41/" target="_blank" rel="noopener noreferrer">@kirin.41</a></dd></div>
+    </dl>
+  </section>
+</div>
+</BaseLayout>
+
+<style is:global>
+  html:has(.legal-doc) #hd,
+  html:has(.legal-doc) footer { display: none !important; }
+  body:has(.legal-doc), body:has(.legal-doc) main { background: #080808; }
+  body:has(.legal-doc) main { padding-top: 0; }
+</style>
+
+<script>
+  const initLdReveal = () => {
+    const els = document.querySelectorAll<HTMLElement>('.legal-doc .gx-reveal:not(.is-bound)');
+    if (!els.length) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const el = e.target as HTMLElement;
+        const delay = el.dataset.revealDelay;
+        if (delay) el.style.transitionDelay = `${delay}ms`;
+        el.classList.add('is-in');
+        io.unobserve(el);
+      }
+    }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
+    els.forEach((el) => { el.classList.add('is-bound'); io.observe(el); });
+  };
+  initLdReveal();
+  document.addEventListener('astro:page-load', initLdReveal);
+</script>
+
+<style>
+  .legal-doc {
+    --gx-bg: #080808; --gx-txt: #F5F5F2; --gx-sub: rgba(255,255,255,.62); --gx-line: rgba(255,255,255,.14);
+    --gx-accent: #1473FF;
+    --gx-en: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--gx-bg); color: var(--gx-txt); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Noto Sans JP', sans-serif;
+    min-height: 100vh; padding-bottom: clamp(90px, 14vh, 160px);
+  }
+
+  .ld-nav {
+    position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
+    height: 76px; padding: 0 clamp(20px, 4vw, 48px); border-bottom: 1px solid var(--gx-line);
+    background: rgba(8,8,8,.86); backdrop-filter: blur(16px);
+  }
+  .ld-logo { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; line-height: 1; }
+  .ld-logo-ii { font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', serif; font-size: 19px; font-weight: 400; letter-spacing: .08em; color: var(--gx-txt); }
+  .ld-logo-en { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 8px; font-weight: 400; letter-spacing: .3em; text-transform: lowercase; color: var(--gx-sub); }
+  .ld-back { color: var(--gx-sub); text-decoration: none; font-family: var(--gx-en); font-size: 12px; letter-spacing: .1em; transition: color .3s; }
+  .ld-back:hover, .ld-back:focus-visible { color: var(--gx-txt); }
+
+  .gx-label { font-family: var(--gx-en); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--gx-sub); margin: 0; }
+
+  .ld-hero { max-width: 1200px; margin: 0 auto; padding: clamp(72px, 13vh, 150px) clamp(20px, 3.4vw, 48px) clamp(40px, 6vh, 64px); }
+  .ld-title { font-weight: 700; font-size: clamp(36px, 6vw, 68px); letter-spacing: -.01em; color: var(--gx-txt); margin: 16px 0 18px; text-wrap: balance; }
+  .ld-date { font-family: var(--gx-en); font-size: 12px; letter-spacing: .06em; color: var(--gx-sub); font-variant-numeric: tabular-nums; }
+
+  .ld-list { list-style: none; margin: 0; padding: 0 clamp(20px, 3.4vw, 48px); max-width: 1200px; margin: 0 auto; }
+  .ld-list > li {
+    display: grid; grid-template-columns: 64px 1fr; gap: clamp(18px, 3vw, 40px); align-items: start;
+    border-top: 1px solid var(--gx-line); padding: clamp(28px, 4vh, 44px) 2px;
+    max-width: 760px;
+  }
+  .ld-no { font-family: var(--gx-en); font-weight: 700; font-size: 26px; color: rgba(255,255,255,.28); line-height: 1.4; }
+  .ld-article-body h2 { font-weight: 700; font-size: 17px; color: var(--gx-txt); margin: 0 0 14px; }
+  .ld-article-body p { font-size: 14.5px; line-height: 2; color: var(--gx-sub); margin: 0 0 12px; }
+  .ld-article-body p:last-child { margin-bottom: 0; }
+  .ld-article-body a { color: var(--gx-accent); text-decoration: none; }
+  .ld-article-body a:hover { text-decoration: underline; }
+  .ld-article-body ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 9px; }
+  .ld-article-body li { font-size: 14.5px; line-height: 1.9; color: var(--gx-sub); padding-left: 18px; position: relative; }
+  .ld-article-body li::before { content: '—'; position: absolute; left: 0; color: var(--gx-line); }
+
+  .ld-operator {
+    max-width: 760px; margin: clamp(24px, 4vh, 40px) auto 0; padding: 28px clamp(20px, 3.4vw, 48px);
+    border-top: 1px solid var(--gx-line); border-bottom: 1px solid var(--gx-line);
+  }
+  .ld-info { display: flex; flex-direction: column; gap: 13px; margin-top: 18px; }
+  .ld-info > div { display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 13.5px; line-height: 1.7; }
+  .ld-info dt { color: var(--gx-sub); font-family: var(--gx-en); font-size: 11px; letter-spacing: .06em; margin: 0; padding-top: 1px; }
+  .ld-info dd { color: var(--gx-txt); margin: 0; }
+  .ld-info dd a { color: var(--gx-accent); text-decoration: none; }
+  .ld-info dd a:hover { text-decoration: underline; }
+
+  .gx-reveal {
+    opacity: 0; transform: translateY(26px);
+    transition: opacity .9s cubic-bezier(.22, 1, .36, 1), transform .9s cubic-bezier(.22, 1, .36, 1);
+  }
+  .gx-reveal.is-in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .gx-reveal { opacity: 1; transform: none; transition: none; } }
+
+  @media (max-width: 640px) {
+    .ld-nav { height: 64px; }
+    .ld-list > li { grid-template-columns: 40px 1fr; gap: 14px; }
+    .ld-no { font-size: 19px; }
+  }
+</style>

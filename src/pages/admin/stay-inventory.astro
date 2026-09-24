@@ -1,0 +1,309 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { createClient } from '@supabase/supabase-js';
+import { formatEth, formatCheckin } from '@/lib/stay-format';
+
+const token = Astro.cookies.get('admin_token')?.value;
+if (token !== import.meta.env.ADMIN_TOKEN) return Astro.redirect('/admin/login?return_to=/admin/stay-inventory');
+
+const supabase = createClient(import.meta.env.SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
+const { data: rows } = await supabase.from('stay_inventory').select('*').order('updated_at', { ascending: false }).limit(300);
+const inv = (rows ?? []) as any[];
+
+const STATUS = ['candidate', 'bought', 'listed', 'sold', 'dropped'] as const;
+const statusLabel: Record<string, string> = { candidate: '候補', bought: '仕入済', listed: '出品中', sold: '売却', dropped: '見送り' };
+
+const n = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+const held = inv.filter((r) => r.status === 'bought' || r.status === 'listed');
+const listed = inv.filter((r) => r.status === 'listed');
+const sold = inv.filter((r) => r.status === 'sold');
+
+const investedActive = held.reduce((s, r) => s + n(r.buy_price_eth), 0);
+const realizedPnl = sold.reduce((s, r) => s + (n(r.sold_price_eth) - n(r.buy_price_eth) - n(r.fees_eth)), 0);
+const unrealized = listed.reduce((s, r) => s + (n(r.list_price_eth) - n(r.buy_price_eth)), 0);
+const round4 = (x: number) => Math.round(x * 10000) / 10000;
+
+const activeStatus = Astro.url.searchParams.get('status') ?? 'all';
+const list = activeStatus === 'all' ? inv : inv.filter((r) => r.status === activeStatus);
+const counts: Record<string, number> = { all: inv.length };
+STATUS.forEach((s) => { counts[s] = inv.filter((r) => r.status === s).length; });
+---
+
+<AdminLayout title="転売 在庫・損益" active="stay-inventory">
+  <div class="iv-head">
+    <h1 class="iv-h1">転売 在庫・損益</h1>
+    <p class="iv-sub">
+      仕入れ候補→在庫→出品→売却を管理し、損益を集計します。
+      <b>売買・NFT移転・署名は、あなたが自分のウォレットでOpenSea上で行います</b>。11hotelは鍵も資金も預かりません（記録・管理のみ）。
+    </p>
+  </div>
+
+  <!-- Summary -->
+  <div class="iv-tiles">
+    <div class="iv-tile"><span>候補</span><strong>{counts.candidate}</strong></div>
+    <div class="iv-tile"><span>在庫（仕入済＋出品中）</span><strong>{held.length}</strong></div>
+    <div class="iv-tile"><span>投下額（在庫）</span><strong>{round4(investedActive)}<i>ETH</i></strong></div>
+    <div class="iv-tile"><span>含み（出品中の想定）</span><strong class={unrealized >= 0 ? 'pos' : 'neg'}>{unrealized >= 0 ? '+' : ''}{round4(unrealized)}<i>ETH</i></strong></div>
+    <div class="iv-tile iv-tile--accent"><span>実現損益（売却済）</span><strong class={realizedPnl >= 0 ? 'pos' : 'neg'}>{realizedPnl >= 0 ? '+' : ''}{round4(realizedPnl)}<i>ETH</i></strong></div>
+  </div>
+
+  <!-- Add -->
+  <details class="iv-add">
+    <summary>＋ 在庫に追加</summary>
+    <div class="iv-add-body">
+      <div class="iv-add-row">
+        <label>現在の出品から選ぶ
+          <select id="ivPick"><option value="">— 出品を読み込み中/未設定 —</option></select>
+        </label>
+        <button type="button" id="ivReload" class="iv-mini">↻ 再取得</button>
+      </div>
+      <form id="ivAddForm" class="iv-add-grid">
+        <label>Token ID *<input name="token_id" required placeholder="128" /></label>
+        <label>施設名<input name="house" placeholder="NOT A HOTEL …" /></label>
+        <label>都道府県<input name="prefecture" /></label>
+        <label>PLACE<input name="place" /></label>
+        <label>チェックイン<input name="checkin_date" placeholder="YYYY-MM-DD" /></label>
+        <label>泊数<input name="nights" type="number" min="0" /></label>
+        <label>OpenSea URL<input name="opensea_url" placeholder="https://opensea.io/assets/…" /></label>
+        <label>画像URL<input name="image_url" placeholder="https://…" /></label>
+        <label>仕入れ額 ETH<input name="buy_price_eth" type="number" step="0.0001" min="0" /></label>
+        <label>ステータス
+          <select name="status">
+            <option value="candidate">候補</option>
+            <option value="bought">仕入済</option>
+          </select>
+        </label>
+        <div class="iv-add-actions">
+          <button type="submit" class="iv-save">追加する</button>
+          <button type="button" id="ivWallet" class="iv-mini">MetaMask接続</button>
+          <span id="ivAddMsg" class="iv-msg"></span>
+        </div>
+      </form>
+    </div>
+  </details>
+
+  <!-- Tabs -->
+  <div class="iv-tabs">
+    <a href="/admin/stay-inventory" class={`iv-tab ${activeStatus === 'all' ? 'active' : ''}`}>すべて<span>{counts.all}</span></a>
+    {STATUS.map((s) => (
+      <a href={`/admin/stay-inventory?status=${s}`} class={`iv-tab ${activeStatus === s ? 'active' : ''}`}>{statusLabel[s]}<span>{counts[s]}</span></a>
+    ))}
+  </div>
+
+  {list.length === 0 ? (
+    <div class="iv-empty">該当する在庫はありません。「＋ 在庫に追加」から登録できます。</div>
+  ) : (
+    <div class="iv-list">
+      {list.map((r) => {
+        const sellUrl = r.opensea_url ? `${r.opensea_url.replace(/\/$/, '')}/sell` : null;
+        const realized = r.status === 'sold' ? round4(n(r.sold_price_eth) - n(r.buy_price_eth) - n(r.fees_eth)) : null;
+        return (
+          <div class="iv-item" data-id={r.id}>
+            <div class="iv-item-media">
+              {r.image_url ? <img src={r.image_url} alt="" loading="lazy" /> : <span class="iv-ph">THE KEY</span>}
+              <span class={`iv-badge st-${r.status}`}>{statusLabel[r.status]}</span>
+            </div>
+            <div class="iv-item-body">
+              <div class="iv-item-top">
+                <div>
+                  <p class="iv-item-place">{[r.prefecture, r.place].filter(Boolean).join(' · ') || '—'}</p>
+                  <h3 class="iv-item-house">{r.house ?? '—'} <i>#{r.token_id}</i></h3>
+                  <p class="iv-item-meta">{formatCheckin(r.checkin_date, null)}{r.nights ? ` · ${r.nights}泊` : ''}</p>
+                </div>
+                {realized !== null && (
+                  <div class={`iv-item-pnl ${realized >= 0 ? 'pos' : 'neg'}`}>{realized >= 0 ? '+' : ''}{realized}<i>ETH</i></div>
+                )}
+              </div>
+
+              <form class="iv-form" data-id={r.id}>
+                <div class="iv-form-grid">
+                  <label>状態
+                    <select name="status">
+                      {STATUS.map((s) => <option value={s} selected={r.status === s}>{statusLabel[s]}</option>)}
+                    </select>
+                  </label>
+                  <label>仕入れ ETH<input name="buy_price_eth" type="number" step="0.0001" min="0" value={r.buy_price_eth ?? ''} /></label>
+                  <label>出品 ETH<input name="list_price_eth" type="number" step="0.0001" min="0" value={r.list_price_eth ?? ''} /></label>
+                  <label>売却 ETH<input name="sold_price_eth" type="number" step="0.0001" min="0" value={r.sold_price_eth ?? ''} /></label>
+                  <label>手数料 ETH<input name="fees_eth" type="number" step="0.0001" min="0" value={r.fees_eth ?? ''} /></label>
+                </div>
+                <label class="iv-notes">メモ<input name="notes" value={r.notes ?? ''} placeholder="条件・相手・状況など" /></label>
+                <div class="iv-form-actions">
+                  <button type="submit" class="iv-save">保存</button>
+                  {r.opensea_url && <a class="iv-link" href={r.opensea_url} target="_blank" rel="noopener noreferrer">OpenSeaで仕入れ ↗</a>}
+                  {sellUrl && <a class="iv-link" href={sellUrl} target="_blank" rel="noopener noreferrer">OpenSeaで出品 ↗</a>}
+                  <button type="button" class="iv-del" data-id={r.id}>削除</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+document.addEventListener('astro:page-load', () => {
+  const walletState = { addr: null as string | null };
+
+  async function connectWallet(btn: HTMLElement) {
+    const eth = (window as any).ethereum;
+    if (!eth) { btn.textContent = 'MetaMask未検出'; return; }
+    try {
+      const a = await eth.request({ method: 'eth_requestAccounts' });
+      if (a && a[0]) { walletState.addr = a[0]; btn.textContent = a[0].slice(0, 6) + '…' + a[0].slice(-4); btn.classList.add('on'); }
+    } catch (_e) { /* declined */ }
+  }
+  document.getElementById('ivWallet')?.addEventListener('click', (e) => connectWallet(e.currentTarget as HTMLElement));
+
+  // 現在の出品を読み込んで候補に
+  const pick = document.getElementById('ivPick') as HTMLSelectElement | null;
+  const addForm = document.getElementById('ivAddForm') as HTMLFormElement | null;
+  let listings: any[] = [];
+  async function loadListings() {
+    if (!pick) return;
+    try {
+      const res = await fetch('/api/stays/opensea', { headers: { accept: 'application/json' } });
+      const data = await res.json();
+      listings = Array.isArray(data.listings) ? data.listings : [];
+      pick.replaceChildren(new Option('— 出品から選んで自動入力 —', ''),
+        ...listings.map((l: any) => new Option(`${l.house || l.name} / #${l.tokenId} · ${l.price} ${l.currency}`, l.tokenId)));
+      if (listings.length === 0) pick.replaceChildren(new Option('— 出品なし / APIキー未設定（手動入力可） —', ''));
+    } catch { pick.replaceChildren(new Option('— 取得できません（手動入力可） —', '')); }
+  }
+  pick?.addEventListener('change', () => {
+    const s = listings.find((l) => l.tokenId === pick.value);
+    if (!s || !addForm) return;
+    const set = (name: string, val: any) => { const el = addForm.elements.namedItem(name) as HTMLInputElement | null; if (el) el.value = val ?? ''; };
+    set('token_id', s.tokenId); set('house', s.house || s.name); set('prefecture', s.prefecture); set('place', s.place);
+    set('checkin_date', s.checkIn); set('nights', s.nights ?? ''); set('opensea_url', s.openseaUrl); set('image_url', s.keyImageUrl ?? s.imageUrl ?? '');
+    set('buy_price_eth', s.price ?? '');
+  });
+  document.getElementById('ivReload')?.addEventListener('click', loadListings);
+  loadListings();
+
+  // 追加
+  addForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('ivAddMsg')!;
+    const fd = new FormData(addForm);
+    const payload: Record<string, any> = { wallet_address: walletState.addr };
+    fd.forEach((v, k) => { payload[k] = v.toString(); });
+    msg.textContent = '追加中…';
+    try {
+      const res = await fetch('/api/admin/stay/inventory/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '失敗しました');
+      (window as any).showToast?.('在庫に追加しました');
+      setTimeout(() => location.reload(), 500);
+    } catch (err: any) { msg.textContent = err.message || '失敗しました'; }
+  });
+
+  // 各在庫の保存
+  document.querySelectorAll<HTMLFormElement>('.iv-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = form.dataset.id!;
+      const fd = new FormData(form);
+      const body: Record<string, any> = {};
+      fd.forEach((v, k) => { body[k] = v.toString(); });
+      if (walletState.addr) body.wallet_address = walletState.addr;
+      const btn = form.querySelector<HTMLButtonElement>('.iv-save');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/stay/inventory/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || '保存に失敗しました');
+        (window as any).showToast?.('保存しました');
+        setTimeout(() => location.reload(), 500);
+      } catch (err: any) { (window as any).showToast?.(err.message); }
+      finally { if (btn) btn.disabled = false; }
+    });
+  });
+
+  // 削除
+  document.querySelectorAll<HTMLButtonElement>('.iv-del').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('この在庫を削除しますか？')) return;
+      const id = btn.dataset.id!;
+      try {
+        const res = await fetch(`/api/admin/stay/inventory/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
+        if (!res.ok) throw new Error();
+        (window as any).showToast?.('削除しました');
+        setTimeout(() => location.reload(), 400);
+      } catch { (window as any).showToast?.('削除に失敗しました'); }
+    });
+  });
+});
+</script>
+
+<style>
+  .iv-head { margin-bottom: 18px; }
+  .iv-h1 { font-size: 18px; font-weight: 700; color: var(--c-text); margin-bottom: 6px; }
+  .iv-sub { font-size: 12px; color: var(--c-text2); line-height: 1.7; max-width: 760px; }
+  .iv-sub b { color: var(--c-text); }
+
+  .iv-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 18px; }
+  @media (min-width: 720px) { .iv-tiles { grid-template-columns: repeat(5, 1fr); } }
+  .iv-tile { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .iv-tile span { font-size: 10px; letter-spacing: .06em; color: var(--c-text3); }
+  .iv-tile strong { font-size: 22px; font-weight: 700; color: var(--c-text); font-variant-numeric: tabular-nums; }
+  .iv-tile strong i { font-size: 11px; font-weight: 400; color: var(--c-text3); margin-left: 4px; font-style: normal; }
+  .iv-tile--accent { border-color: var(--c-accent); }
+  .pos { color: var(--c-green) !important; } .neg { color: var(--c-red) !important; }
+
+  .iv-add { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px; margin-bottom: 18px; }
+  .iv-add summary { cursor: pointer; padding: 14px 16px; font-size: 13px; font-weight: 600; color: var(--c-text); }
+  .iv-add-body { padding: 0 16px 16px; }
+  .iv-add-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 14px; flex-wrap: wrap; }
+  .iv-add-row label { flex: 1; display: flex; flex-direction: column; gap: 5px; font-size: 10px; letter-spacing: .06em; color: var(--c-text3); min-width: 220px; }
+  .iv-add-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (min-width: 760px) { .iv-add-grid { grid-template-columns: repeat(4, 1fr); } }
+  .iv-add-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--c-text3); }
+  .iv-add-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  .iv-add input, .iv-add select, .iv-form input, .iv-form select {
+    background: var(--c-bg); border: 1px solid var(--c-border); color: var(--c-text); border-radius: 6px; padding: 9px 10px; font: inherit; font-size: 13px; width: 100%; outline: none;
+  }
+  .iv-add input:focus, .iv-add select:focus, .iv-form input:focus, .iv-form select:focus { border-color: var(--c-accent); }
+
+  .iv-save { background: var(--c-accent); color: #071019; border: 0; border-radius: 6px; padding: 9px 20px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .iv-mini { background: var(--c-surface2); border: 1px solid var(--c-border); color: var(--c-text); border-radius: 6px; padding: 8px 14px; font-size: 11px; cursor: pointer; }
+  .iv-mini.on { background: var(--c-accent); color: #071019; border-color: var(--c-accent); }
+  .iv-msg { font-size: 12px; color: var(--c-text2); }
+
+  .iv-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .iv-tab { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--c-text2); text-decoration: none; padding: 7px 12px; border: 1px solid var(--c-border); border-radius: 6px; background: var(--c-surface); }
+  .iv-tab.active { color: var(--c-text); border-color: var(--c-accent); background: var(--c-surface2); }
+  .iv-tab span { font-size: 11px; color: var(--c-text3); background: var(--c-bg); padding: 1px 6px; border-radius: 10px; }
+
+  .iv-empty { color: var(--c-text2); font-size: 13px; padding: 40px 0; text-align: center; }
+  .iv-list { display: flex; flex-direction: column; gap: 10px; }
+  .iv-item { display: grid; grid-template-columns: 1fr; gap: 14px; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px; padding: 14px; }
+  @media (min-width: 640px) { .iv-item { grid-template-columns: 180px 1fr; } }
+  .iv-item-media { position: relative; aspect-ratio: 4/3; background: var(--c-bg); border-radius: 6px; overflow: hidden; }
+  .iv-item-media img { width: 100%; height: 100%; object-fit: cover; }
+  .iv-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--c-text3); font-size: 12px; }
+  .iv-badge { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+  .st-candidate { background: rgba(148,140,128,.25); color: #cfc7ba; }
+  .st-bought { background: rgba(96,165,250,.18); color: var(--c-accent); }
+  .st-listed { background: rgba(251,146,60,.18); color: var(--c-orange); }
+  .st-sold { background: rgba(74,222,128,.2); color: var(--c-green); }
+  .st-dropped { background: rgba(248,113,113,.16); color: var(--c-red); }
+  .iv-item-top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+  .iv-item-place { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--c-text3); margin-bottom: 6px; }
+  .iv-item-house { font-size: 16px; font-weight: 600; color: var(--c-text); }
+  .iv-item-house i { font-style: normal; font-size: 12px; color: var(--c-text3); font-weight: 400; }
+  .iv-item-meta { font-size: 12px; color: var(--c-text2); margin-top: 4px; }
+  .iv-item-pnl { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .iv-item-pnl i { font-size: 11px; font-weight: 400; font-style: normal; margin-left: 3px; color: var(--c-text3); }
+
+  .iv-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
+  @media (min-width: 720px) { .iv-form-grid { grid-template-columns: repeat(5, 1fr); } }
+  .iv-form label { display: flex; flex-direction: column; gap: 5px; font-size: 10px; letter-spacing: .04em; color: var(--c-text3); }
+  .iv-notes { display: block; margin-bottom: 10px; }
+  .iv-form-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .iv-link { font-size: 12px; color: var(--c-accent); text-decoration: none; }
+  .iv-del { margin-left: auto; background: transparent; border: 1px solid var(--c-border); color: var(--c-red); border-radius: 6px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+</style>

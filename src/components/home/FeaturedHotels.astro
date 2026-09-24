@@ -1,0 +1,85 @@
+---
+// ON SALE: 出品中の THE KEY を建築ポートフォリオのようなリズムで並べる。
+import HotelEditorialCard from './HotelEditorialCard.astro';
+
+export type FeaturedItem = {
+  href: string;
+  name: string;
+  kicker: string;
+  copy: string | null;
+  price: string | null;
+  image: string | null;
+};
+interface Props {
+  items: FeaturedItem[];
+  /** 出品の総数。items（抜粋）より多い場合のみ「すべて見る」リンクを出す */
+  totalCount?: number;
+  floorEth?: string | null;
+}
+const { items, totalCount, floorEth } = Astro.props;
+const showViewAll = totalCount != null && totalCount > items.length;
+
+// レイアウトのリズム: 大型 → 2カラム → 横長 → 2カラム → 大型
+const PATTERN: Array<{ span: string; ratio: string }> = [
+  { span: '1 / span 10', ratio: '16 / 10' },
+  { span: 'span 6', ratio: '4 / 5' },
+  { span: 'span 6', ratio: '4 / 5' },
+  { span: '1 / -1', ratio: '21 / 9' },
+  { span: 'span 6', ratio: '4 / 5' },
+  { span: 'span 6', ratio: '16 / 10' },
+  { span: '3 / span 10', ratio: '16 / 10' },
+];
+---
+
+<section class="gxf" id="hotels">
+  <div class="gxf-head gx-reveal">
+    <div class="gxf-head-top">
+      <p class="gx-label">ON SALE — THE KEY</p>
+      {floorEth && <span class="gxf-floor">From {floorEth} ETH (incl. handling)</span>}
+    </div>
+    <h2>Nights available now.</h2>
+    <p class="gxf-note">Prices shown include 11hotel's handling fee. Not a recommendation to buy or sell.</p>
+    {showViewAll && (
+      <a class="gxf-viewall" href="/vip">View all listings ({totalCount}) →</a>
+    )}
+  </div>
+  <div class="gxf-grid">
+    {items.map((it, i) => {
+      const p = PATTERN[i % PATTERN.length];
+      return (
+        <HotelEditorialCard
+          href={it.href}
+          name={it.name}
+          kicker={it.kicker}
+          copy={it.copy}
+          price={it.price}
+          image={it.image}
+          ratio={p.ratio}
+          span={p.span}
+        />
+      );
+    })}
+    {items.length === 0 && (
+      <p class="gxf-empty">No stay keys are currently listed. Please check back shortly.</p>
+    )}
+  </div>
+</section>
+
+<style>
+  .gxf { max-width: 1440px; margin: 0 auto; padding: clamp(60px, 10vh, 130px) clamp(20px, 3.4vw, 48px); }
+  .gxf-head { margin-bottom: clamp(30px, 5vh, 56px); }
+  .gxf-head-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 20px; }
+  .gxf-floor { font-family: var(--gx-en); font-size: 12px; letter-spacing: .04em; color: var(--gx-accent); }
+  .gxf-head h2 {
+    font-weight: 700; font-size: clamp(24px, 3vw, 40px); letter-spacing: .01em;
+    color: var(--gx-txt); margin: 14px 0 12px;
+  }
+  .gxf-note { font-size: 12px; line-height: 2; color: var(--gx-sub); margin: 0 0 16px; }
+  .gxf-viewall { display: inline-block; font-size: 13px; color: var(--gx-txt); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.4); padding-bottom: 2px; transition: opacity .3s; }
+  .gxf-viewall:hover, .gxf-viewall:focus-visible { opacity: .7; }
+  .gxf-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: clamp(16px, 2vw, 28px); }
+  .gxf-empty { grid-column: 1 / -1; font-size: 13.5px; line-height: 2; color: var(--gx-sub); border: 1px solid var(--gx-line); border-radius: 10px; padding: 40px; text-align: center; }
+  @media (max-width: 860px) {
+    .gxf-grid { display: grid; grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,256 @@
+---
+/** Quant Control · trade */
+---
+<section id="trade" class="view section active desk-view" data-view="trade">
+      <div class="desk">
+        <aside class="desk-watch" aria-label="ウォッチリスト">
+          <p class="watch-kicker">WATCH</p>
+          <div class="watchlist-table-wrap">
+            <table class="watchlist-table" id="watchlist-table">
+              <thead>
+                <tr><th>Symbol</th><th>Last</th><th>Chg</th></tr>
+              </thead>
+              <tbody id="watchlist-body"></tbody>
+            </table>
+          </div>
+          <p class="watch-note muted" id="watch-detail-meta">参照=Binance公開 · 執行=MT5別</p>
+          <p class="sr-only" id="watch-detail-name">—</p>
+          <p class="sr-only" id="watch-detail-price">—</p>
+        </aside>
+
+        <div class="desk-main">
+          <div class="desk-toolbar">
+            <div class="desk-symbol-block">
+              <input id="desk-symbol-search" class="desk-search" list="desk-symbol-list" placeholder="BTCUSDm" />
+              <datalist id="desk-symbol-list">
+                <option value="BTCUSDm"></option>
+                <option value="ETHUSDm"></option>
+                <option value="EURUSDm"></option>
+                <option value="GBPUSDm"></option>
+              </datalist>
+              <span id="chart-last-price" class="desk-last-price">—</span>
+              <span id="chart-badge" class="mini-badge">—</span>
+            </div>
+            <div class="desk-tf-group" role="group" aria-label="時間足">
+              <button type="button" class="tf-pill" data-tf="1m">1m</button>
+              <button type="button" class="tf-pill" data-tf="5m">5m</button>
+              <button type="button" class="tf-pill active" data-tf="15m">15m</button>
+              <button type="button" class="tf-pill" data-tf="1h">1h</button>
+              <label class="sr-only" for="chart-timeframe">足</label>
+              <select id="chart-timeframe" class="sr-only" tabindex="-1" aria-hidden="true">
+                <option value="1m">1m</option>
+                <option value="5m">5m</option>
+                <option value="15m" selected>15m</option>
+                <option value="1h">1h</option>
+              </select>
+            </div>
+            <p id="chart-source" class="desk-source mono muted">source —</p>
+            <button id="btn-refresh" type="button" class="desk-ghost">更新</button>
+          </div>
+
+          <div class="chart-stage-wrap">
+            <div class="chart-grid" id="chart-grid">
+              <article class="chart-pane active" data-symbol="BTCUSDm">
+                <header class="chart-pane-head">
+                  <div>
+                    <h3 class="chart-pane-title">BTCUSDm</h3>
+                    <p class="chart-pane-sub muted">BTCUSDT · ref</p>
+                  </div>
+                  <span class="chart-pane-price" data-role="price">—</span>
+                </header>
+                <canvas class="pane-canvas" data-symbol="BTCUSDm" width="960" height="520" aria-label="BTCUSDm chart"></canvas>
+              </article>
+              <article class="chart-pane" data-symbol="ETHUSDm">
+                <header class="chart-pane-head">
+                  <div>
+                    <h3 class="chart-pane-title">ETHUSDm</h3>
+                    <p class="chart-pane-sub muted">ETHUSDT · ref</p>
+                  </div>
+                  <span class="chart-pane-price" data-role="price">—</span>
+                </header>
+                <canvas class="pane-canvas" data-symbol="ETHUSDm" width="960" height="520" aria-label="ETHUSDm chart"></canvas>
+              </article>
+              <article class="chart-pane" data-symbol="EURUSDm">
+                <header class="chart-pane-head">
+                  <div>
+                    <h3 class="chart-pane-title">EURUSDm</h3>
+                    <p class="chart-pane-sub muted">EURUSDT · ref</p>
+                  </div>
+                  <span class="chart-pane-price" data-role="price">—</span>
+                </header>
+                <canvas class="pane-canvas" data-symbol="EURUSDm" width="960" height="520" aria-label="EURUSDm chart"></canvas>
+              </article>
+              <article class="chart-pane" data-symbol="GBPUSDm">
+                <header class="chart-pane-head">
+                  <div>
+                    <h3 class="chart-pane-title">GBPUSDm</h3>
+                    <p class="chart-pane-sub muted">GBPUSDT · ref</p>
+                  </div>
+                  <span class="chart-pane-price" data-role="price">—</span>
+                </header>
+                <canvas class="pane-canvas" data-symbol="GBPUSDm" width="960" height="520" aria-label="GBPUSDm chart"></canvas>
+              </article>
+            </div>
+            <p id="chart-empty" class="chart-empty" hidden>チャートデータを待っています…</p>
+          </div>
+          <canvas id="trade-chart" width="1" height="1" hidden aria-hidden="true"></canvas>
+          <h3 id="chart-title" class="sr-only">リアルタイムチャート</h3>
+          <p id="chart-subtitle" class="sr-only"></p>
+
+          <div class="chart-statusbar" aria-label="運用ステータス">
+            <span id="trading-badge" class="mini-badge">—</span>
+            <span id="pulse-line" class="pulse-line muted">接続 — · 心拍 —</span>
+            <span id="essential-metrics" class="status-metrics muted">Shadow — · 約定 —</span>
+            <span id="learn-one-liner" class="learn-one-liner muted">学習 —</span>
+            <span id="header-broker-inline" class="desk-broker-chip">接続先…</span>
+          </div>
+        </div>
+
+        <aside class="desk-side" aria-label="操作パネル" id="trading-panel">
+          <div class="buy-status" id="buy-status">
+            <p id="trade-status-label" class="trade-status compact">STOPPED</p>
+            <p id="trade-status-sub" class="muted">未起動</p>
+            <div class="stop-strip" id="stop-strip" hidden aria-label="停止状態">
+              <div class="stop-cell">
+                <span class="stop-k">停止要求</span>
+                <span id="kill-ack-label" class="stop-v">—</span>
+              </div>
+              <div class="stop-cell">
+                <span class="stop-k">建玉フラット</span>
+                <span id="flatten-label" class="stop-v">—</span>
+              </div>
+            </div>
+          </div>
+          <div id="trading-metrics" class="sr-only" aria-hidden="true"></div>
+
+          <div class="mode-toggle" role="group" aria-label="取引モード">
+            <button type="button" class="mode-btn active" data-mode="shadow" id="mode-shadow">
+              SHADOW<span class="mode-hint">発注なし</span>
+            </button>
+            <button type="button" class="mode-btn" data-mode="dry_run" id="mode-dry">
+              DRY<span class="mode-hint">模擬</span>
+            </button>
+            <button type="button" class="mode-btn" data-mode="live" id="mode-live">
+              LIVE<span class="mode-hint">実発注</span>
+            </button>
+          </div>
+          <input type="hidden" id="trade-mode" value="shadow" />
+          <input type="hidden" id="trade-preset" value="crypto" />
+          <input type="hidden" id="trade-symbols" value="BTCUSDm" />
+          <input type="hidden" id="trade-max-lots" value="0.01" />
+
+          <div id="live-gates" class="live-gates" hidden>
+            <p id="live-arm-hint" class="live-arm-hint muted">確認文と承認トークンが入ると LIVE 開始が有効になります</p>
+            <label class="kai-field" id="trade-confirm-wrap">
+              <span>LIVE確認文</span>
+              <input id="trade-confirm" placeholder="I_UNDERSTAND_LIVE_TRADING" maxlength="80" autocomplete="off" spellcheck="false" />
+            </label>
+            <label class="kai-field" id="trade-approval-wrap">
+              <span>承認トークン</span>
+              <input id="trade-approval" type="password" placeholder="16文字以上" maxlength="200" autocomplete="new-password" />
+            </label>
+          </div>
+
+          <div class="buy-cta">
+            <button id="btn-trade-shadow" type="button" class="buy-btn shadow">Shadow開始</button>
+            <button id="btn-trade-dry" type="button" class="buy-btn dry" hidden>ドライラン開始</button>
+            <button id="btn-trade-live" type="button" class="buy-btn live" hidden disabled>LIVE開始</button>
+            <button id="btn-trade-stop" type="button" class="danger stop-btn">停止</button>
+          </div>
+          <p id="trading-action-msg" class="action-msg" role="status"></p>
+
+          <details class="trade-detail-fold" id="promote-fold">
+            <summary>モデル昇格（承認必要）</summary>
+            <div class="market-promote-box">
+              <label class="kai-field"><span>候補ID</span>
+                <input id="market-candidate-id" placeholder="cand_xxxxxxxxxxxx" maxlength="80" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="kai-field"><span>承認者</span>
+                <input id="market-approved-by" value="kaiya" maxlength="120" autocomplete="off" />
+              </label>
+              <label class="kai-field"><span>承認トークン</span>
+                <input id="market-approval" type="password" placeholder="16文字以上" maxlength="200" autocomplete="new-password" />
+              </label>
+              <button id="btn-market-promote" type="button" class="primary">昇格する</button>
+            </div>
+          </details>
+
+          <details class="trade-detail-fold">
+            <summary>解除・検査</summary>
+            <div class="buy-secondary">
+              <button id="btn-trade-clear" type="button">停止解除</button>
+              <button id="btn-trade-inspect" type="button">口座検査</button>
+            </div>
+            <pre id="trading-detail" class="probe mono compact"></pre>
+            <div id="live-metrics" class="metric-grid compact"></div>
+            <div class="panel-head subhead">
+              <h3>口座リスク</h3>
+              <span id="risk-badge" class="mini-badge">—</span>
+            </div>
+            <div id="risk-metrics" class="metric-grid compact"></div>
+          </details>
+          <span id="live-badge" class="sr-only">—</span>
+
+          <button type="button" id="btn-open-more" class="desk-linkish">接続・台帳・学習 →</button>
+          <a id="link-open-admin" class="desk-linkish" href="/admin/quant" hidden>管理画面へ →</a>
+        </aside>
+      </div>
+
+      <aside id="more-drawer" class="more-drawer" hidden aria-label="詳細ドロワー">
+        <div class="more-drawer-head">
+          <h3>接続・台帳・学習</h3>
+          <button type="button" id="btn-close-more" class="desk-ghost">閉じる</button>
+        </div>
+        <div class="more-drawer-body" id="more-panel">
+          <div class="more-block">
+            <h4>接続</h4>
+            <div id="broker-panel">
+              <span id="broker-badge" class="mini-badge">—</span>
+              <p id="broker-summary" class="connection-summary compact">—</p>
+              <div class="connection-grid compact" id="broker-grid"></div>
+              <p id="broker-note" class="connection-note muted"></p>
+              <details class="broker-catalog" id="broker-catalog">
+                <summary>
+                  ブローカー一覧
+                  <span id="broker-catalog-count" class="catalog-count">—</span>
+                </summary>
+                <p class="catalog-note muted" id="broker-catalog-note">端末 `.env` で切替</p>
+                <div class="broker-chip-grid" id="broker-chip-grid"></div>
+              </details>
+            </div>
+          </div>
+          <div class="more-block">
+            <h4>学習・研究操作</h4>
+            <div class="actions stacked">
+              <button id="btn-retrain" type="button">合成で再学習</button>
+              <button id="btn-diagnose" type="button">診断サンプル</button>
+              <button id="btn-learn" type="button">台帳学習を反映</button>
+            </div>
+            <p id="action-msg" class="action-msg" role="status"></p>
+            <p class="muted desk-learn-note">kai[解]・GPU詳細はコマンドパレット → AI・学習</p>
+          </div>
+          <div class="more-block">
+            <h4>台帳</h4>
+            <div class="table-wrap compact">
+              <table id="decisions-table">
+                <thead><tr><th>時刻</th><th>銘柄</th><th>目標</th><th>状態</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="table-wrap compact">
+              <table id="orders-table">
+                <thead><tr><th>時刻</th><th>銘柄</th><th>side</th><th>status</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="table-wrap compact">
+              <table id="fills-table">
+                <thead><tr><th>約定</th><th>銘柄</th><th>side</th><th>price</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="risk-events" class="event-list compact"></div>
+          </div>
+        </div>
+      </aside>
+    </section>

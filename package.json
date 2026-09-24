@@ -1,0 +1,37 @@
+{
+  "name": "hotel-affiliate",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check:checkout": "node scripts/compile-checkout.mjs",
+    "test:checkout": "node --test tests/checkout.test.ts",
+    "test:security": "node --test tests/public-api-security.test.ts",
+    "build:checkout": "node scripts/compile-checkout.mjs --write",
+    "check:checkout:v2": "node scripts/compile-checkout-v2.mjs",
+    "build:checkout:v2": "node scripts/compile-checkout-v2.mjs --write",
+    "preview": "astro preview",
+    "astro": "astro",
+    "deploy": "bash deploy.sh",
+    "deploy:all": "bash deploy.sh --worker"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/cloudflare": "^13.3.1",
+    "@astrojs/sitemap": "^3.7.2",
+    "@supabase/supabase-js": "^2.105.3",
+    "@tailwindcss/vite": "^4.2.4",
+    "astro": "^6.2.2",
+    "playwright": "^1.60.0",
+    "sass": "^1.100.0",
+    "solc": "^0.8.30",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@walletconnect/ethereum-provider": "^2.23.10",
+    "lenis": "^1.3.23",
+    "viem": "^2.54.3"
+  }
+}

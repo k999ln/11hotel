@@ -1,0 +1,63 @@
+---
+// 11hotelについて: マーケットの原則を、大きな数字と細い罫線のエディトリアルレイアウトで。
+const PRINCIPLES: Array<{ no: string; title: string; body: string }> = [
+  { no: '01', title: 'The price shown is the total, handling included', body: 'We show only the final price — the listing price plus 11hotel\'s handling fee. No costs added later to skew your decision.' },
+  { no: '02', title: 'We hold neither the funds nor the NFT', body: 'Payment, transfer of the stay key, and the handling fee all complete in a single transaction. 11hotel keeps nothing once it\'s done.' },
+  { no: '03', title: 'Not treated as an investment product', body: 'Reference prices are informational only — we never talk about appreciation or resale profit. THE KEY is a stay key meant for staying.' },
+  { no: '04', title: 'A person supports you from purchase to activation', body: 'So you can buy even if you\'re new to wallets and NFTs, a person is available from the pre-purchase inquiry through activation.' },
+];
+---
+
+<section class="gxa" id="about">
+  <div class="gxa-in">
+    <div class="gxa-head gx-reveal">
+      <p class="gx-label">ABOUT 11HOTEL MARKET</p>
+      <h2>“Not a booking site.”</h2>
+      <p class="gxa-ja">
+        11hotel isn't a booking site — it's a market that organizes public<br />
+        listings of NOT A HOTEL's "THE KEY" stay keys and supports you through purchase and activation.
+      </p>
+    </div>
+    <ol class="gxa-list">
+      {PRINCIPLES.map((c, i) => (
+        <li class="gx-reveal" data-reveal-delay={String(i * 80)}>
+          <span class="gxa-no">{c.no}</span>
+          <div>
+            <h3>{c.title}</h3>
+            <p>{c.body}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+    <p class="gxa-legal gx-reveal">
+      This site organizes public listing information and shows reference prices — it is not investment advice or a recommendation to buy or sell.
+      Price, liquidity, and the validity of the stay right are not guaranteed. Please review NOT A HOTEL's official terms before you buy.
+    </p>
+  </div>
+</section>
+
+<style>
+  .gxa { background: var(--gx-bg2); }
+  .gxa-in { max-width: 1200px; margin: 0 auto; padding: clamp(80px, 14vh, 180px) clamp(20px, 3.4vw, 48px); }
+  .gxa-head { margin-bottom: clamp(40px, 7vh, 80px); max-width: 860px; }
+  .gxa-head h2 {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; font-style: italic;
+    font-size: clamp(38px, 5vw, 80px); line-height: 1.1; letter-spacing: 0;
+    color: var(--gx-txt); margin: 16px 0 24px;
+  }
+  .gxa-ja { font-size: 15px; line-height: 2.3; color: var(--gx-sub); margin: 0; }
+
+  .gxa-list { list-style: none; margin: 0; padding: 0; }
+  .gxa-list li {
+    display: grid; grid-template-columns: minmax(72px, 160px) 1fr; gap: clamp(14px, 3vw, 40px);
+    align-items: start; border-top: 1px solid var(--gx-line); padding: clamp(24px, 4vh, 40px) 2px;
+  }
+  .gxa-list li:last-child { border-bottom: 1px solid var(--gx-line); }
+  .gxa-no {
+    font-family: var(--gx-en); font-weight: 700; font-size: clamp(30px, 4vw, 56px);
+    line-height: 1; color: rgba(255,255,255,.28);
+  }
+  .gxa-list h3 { font-weight: 700; font-size: clamp(17px, 2vw, 24px); color: var(--gx-txt); margin: 0 0 10px; }
+  .gxa-list p { font-size: 13.5px; line-height: 2; color: var(--gx-sub); margin: 0; max-width: 60ch; }
+  .gxa-legal { font-size: 11.5px; line-height: 2.1; color: rgba(255,255,255,.42); margin: 34px 0 0; max-width: 80ch; }
+</style>

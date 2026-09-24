@@ -1,0 +1,62 @@
+---
+/** Quant Control · overview */
+---
+<section id="overview" class="view section" data-view="overview" hidden>
+      <div class="section-title">
+        <div>
+          <p class="section-kicker">SYSTEM NOW</p>
+          <h2>全体状態</h2>
+        </div>
+        <p class="muted">15秒ごとに読み取り専用で更新</p>
+      </div>
+
+      <div class="strip" aria-label="summary">
+        <article>
+          <h3>システム</h3>
+          <p id="sum-system" class="stat">—</p>
+          <p class="hint">閉ループ全体</p>
+        </article>
+        <article>
+          <h3>ライブ</h3>
+          <p id="sum-live" class="stat">—</p>
+          <p class="hint">heartbeat / 台帳</p>
+        </article>
+        <article>
+          <h3>AI</h3>
+          <p id="sum-ai" class="stat">—</p>
+          <p class="hint">永続化 + 予測プローブ</p>
+        </article>
+        <article>
+          <h3>リスク</h3>
+          <p id="sum-risk" class="stat">—</p>
+          <p class="hint">口座制限 / kill switch</p>
+        </article>
+        <article>
+          <h3>学習反映</h3>
+          <p id="sum-learn" class="stat">—</p>
+          <p class="hint">再学習 + runtime学習</p>
+        </article>
+      </div>
+
+      <section class="panel command-panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">CONTROL</p>
+            <h3>明示操作</h3>
+          </div>
+          <p class="muted">再学習・診断・取引はトレード画面の右ドックから</p>
+        </div>
+        <p class="muted">トレード → 学習 / 購入 タブで操作します。自動更新では状態を書き換えません。</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">CLOSED LOOP</p>
+            <h3>処理パイプライン</h3>
+          </div>
+          <p class="muted">各段の状態は実ファイル・モデル・台帳から判定</p>
+        </div>
+        <div id="pipeline" class="pipeline"></div>
+      </section>
+    </section>

@@ -1,0 +1,257 @@
+---
+interface Props { title: string; active: string; pendingCount?: number; }
+const { title, active, pendingCount = 0 } = Astro.props;
+---
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{title} — いいhotel 管理</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style is:global>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --c-bg:#0f0f0f;
+      --c-surface:#1a1a1a;
+      --c-surface2:#222;
+      --c-border:rgba(255,255,255,.1);
+      --c-border2:rgba(255,255,255,.06);
+      --c-text:#e8e8e8;
+      --c-text2:#888;
+      --c-text3:#444;
+      --c-accent:#60a5fa;    /* blue-400 */
+      --c-green:#4ade80;
+      --c-red:#f87171;
+      --c-orange:#fb923c;
+      --sidebar:220px;
+      --topbar:52px;
+    }
+    html,body{height:100%}
+    body{
+      font-family:-apple-system,'Inter','Noto Sans JP',sans-serif;
+      background:var(--c-bg);color:var(--c-text);
+      -webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5;
+    }
+
+    /* ── Topbar ── */
+    #tb{
+      position:fixed;inset:0 0 auto 0;z-index:200;
+      height:var(--topbar);
+      background:rgba(15,15,15,.95);
+      backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--c-border);
+      display:flex;align-items:center;padding:0 20px;gap:14px;
+    }
+    .tb-logo{
+      text-decoration:none;display:flex;flex-direction:column;gap:1px;line-height:1;
+    }
+    .tb-logo-ii{
+      font-family:'Shippori Mincho','Hiragino Mincho ProN',serif;font-size:18px;font-weight:400;
+      letter-spacing:.06em;color:var(--c-text);
+    }
+    .tb-logo-en{
+      font-family:'Cormorant Garamond',Georgia,serif;font-size:7px;font-weight:300;
+      letter-spacing:.36em;color:var(--c-text2);text-transform:lowercase;
+    }
+    .tb-sep{width:1px;height:16px;background:var(--c-border)}
+    .tb-page{font-size:13px;color:var(--c-text2)}
+    .tb-right{margin-left:auto}
+    .tb-site{
+      font-size:12px;color:var(--c-text2);text-decoration:none;
+      padding:5px 12px;border:1px solid var(--c-border);
+      transition:all .15s;letter-spacing:.03em;
+    }
+    .tb-site:hover{color:var(--c-text);border-color:var(--c-text2)}
+
+    /* ── Sidebar ── */
+    #sb{
+      position:fixed;inset:var(--topbar) auto 0 0;z-index:100;
+      width:var(--sidebar);
+      background:rgba(15,15,15,.98);
+      border-right:1px solid var(--c-border);
+      padding:16px 10px;overflow-y:auto;
+      display:flex;flex-direction:column;
+    }
+    .sb-group{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--c-text3);padding:16px 10px 6px}
+    .sb-group:first-child{padding-top:4px}
+    .sb-item{
+      display:flex;align-items:center;gap:10px;
+      padding:8px 10px;border-radius:6px;
+      font-size:13px;font-weight:400;color:var(--c-text2);
+      text-decoration:none;transition:all .12s;position:relative;
+    }
+    .sb-item:hover:not(.active){background:var(--c-surface2);color:var(--c-text)}
+    .sb-item.active{background:var(--c-surface);color:var(--c-text);font-weight:600}
+    .sb-item.active::before{
+      content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+      width:3px;height:16px;background:var(--c-accent);border-radius:2px;
+    }
+    .sb-icon{width:18px;text-align:center;font-size:14px;opacity:.7;flex-shrink:0}
+    .sb-item.active .sb-icon{opacity:1}
+    .sb-badge{
+      margin-left:auto;background:var(--c-red);color:#fff;
+      font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;
+    }
+
+    /* ── Main ── */
+    #main{
+      margin:var(--topbar) 0 0 var(--sidebar);
+      padding:32px 36px 80px;
+      min-height:calc(100vh - var(--topbar));
+    }
+
+    /* ── Page header ── */
+    .pg-title{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+    .pg-sub{font-size:12px;color:var(--c-text2)}
+
+    /* ── Section label ── */
+    .slabel{
+      font-size:10px;font-weight:700;letter-spacing:.12em;
+      text-transform:uppercase;color:var(--c-text3);
+      margin:28px 0 10px;display:block;
+    }
+    .slabel:first-child{margin-top:0}
+
+    /* ── Card ── */
+    .card{
+      background:var(--c-surface);
+      border:1px solid var(--c-border);
+      border-radius:8px;overflow:hidden;
+    }
+    .card>*+*{border-top:1px solid var(--c-border2)}
+
+    /* ── Row ── */
+    .row{
+      display:flex;align-items:center;gap:12px;
+      padding:11px 16px;min-height:48px;
+      text-decoration:none;color:var(--c-text);
+      transition:background .1s;
+    }
+    a.row:hover{background:var(--c-surface2)}
+    .row-main{flex:1;min-width:0}
+    .row-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .row-sub{font-size:11px;color:var(--c-text2);margin-top:1px}
+    .row-end{flex-shrink:0;display:flex;align-items:center;gap:8px}
+    .chevron{color:var(--c-text3);font-size:16px}
+
+    /* ── Thumb ── */
+    .thumb{
+      width:38px;height:38px;flex-shrink:0;
+      background:var(--c-surface2);border-radius:4px;
+      overflow:hidden;display:flex;align-items:center;
+      justify-content:center;font-size:16px;
+    }
+    .thumb img{width:100%;height:100%;object-fit:cover}
+
+    /* ── Grid ── */
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    @media(max-width:960px){.g2,.g3{grid-template-columns:1fr}}
+
+    /* ── Stat ── */
+    .stat{background:var(--c-surface);border:1px solid var(--c-border);border-radius:8px;padding:18px}
+    .stat-num{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1}
+    .stat-lbl{font-size:11px;color:var(--c-text2);margin-top:5px}
+
+    /* ── Buttons ── */
+    .btn{
+      display:inline-flex;align-items:center;gap:5px;
+      font-family:inherit;font-size:12px;font-weight:600;
+      padding:7px 14px;border:1px solid var(--c-border);
+      cursor:pointer;letter-spacing:.04em;
+      transition:all .12s;background:transparent;color:var(--c-text);
+    }
+    .btn:hover{border-color:var(--c-text2);background:var(--c-surface2)}
+    .btn-primary{background:var(--c-accent);color:#fff;border-color:var(--c-accent)}
+    .btn-primary:hover{background:#3b82f6;border-color:#3b82f6}
+    .btn-danger{color:var(--c-red);border-color:rgba(248,113,113,.3)}
+    .btn-danger:hover{background:rgba(248,113,113,.1)}
+    .btn-sm{font-size:11px;padding:5px 10px}
+
+    /* ── Badge ── */
+    .badge{
+      display:inline-flex;align-items:center;
+      font-size:10px;font-weight:600;padding:2px 8px;
+      border-radius:4px;letter-spacing:.04em;
+    }
+    .badge-blue  {background:rgba(96,165,250,.15);color:var(--c-accent)}
+    .badge-green {background:rgba(74,222,128,.12);color:var(--c-green)}
+    .badge-red   {background:rgba(248,113,113,.12);color:var(--c-red)}
+    .badge-orange{background:rgba(251,146,60,.12);color:var(--c-orange)}
+    .badge-gray  {background:var(--c-surface2);color:var(--c-text2)}
+
+    /* ── Input ── */
+    .input{
+      width:100%;font-family:inherit;font-size:13px;
+      padding:9px 12px;background:var(--c-surface2);
+      border:1px solid var(--c-border);color:var(--c-text);
+      border-radius:6px;outline:none;transition:border-color .15s;
+    }
+    .input:focus{border-color:var(--c-accent)}
+    .input::placeholder{color:var(--c-text3)}
+
+    /* ── Divider ── */
+    .div{border:none;border-top:1px solid var(--c-border)}
+
+    /* ── Toast ── */
+    #toast{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      background:var(--c-text);color:var(--c-bg);
+      font-size:12px;font-weight:600;letter-spacing:.04em;
+      padding:8px 18px;border-radius:4px;pointer-events:none;
+      opacity:0;transition:opacity .2s;z-index:999;white-space:nowrap;
+    }
+    #toast.show{opacity:1}
+  </style>
+</head>
+<body>
+  <header id="tb">
+    <a href="/admin" class="tb-logo">
+      <span class="tb-logo-ii">いい</span>
+      <span class="tb-logo-en">hotel</span>
+    </a>
+    <div class="tb-sep"></div>
+    <span class="tb-page">{title}</span>
+    <div class="tb-right">
+      <a href="/" target="_blank" class="tb-site">サイトを見る ↗</a>
+    </div>
+  </header>
+
+  <nav id="sb">
+    <span class="sb-group">Market</span>
+    <a href="/admin/stay-deals" class={`sb-item ${active==='stay-deals'?'active':''}`}>
+      <span class="sb-icon">🗝️</span>宿泊券 商談
+    </a>
+    <a href="/admin/stay-inventory" class={`sb-item ${active==='stay-inventory'?'active':''}`}>
+      <span class="sb-icon">🔁</span>転売 在庫・損益
+    </a>
+    <a href="/admin/checkout-deploy" class={`sb-item ${active==='checkout-deploy'?'active':''}`}>
+      <span class="sb-icon">⛓️</span>11hotel決済
+    </a>
+    <a href="/admin/stay-signals" class={`sb-item ${active==='stay-signals'?'active':''}`}>
+      <span class="sb-icon">📈</span>転売 利益デスク
+    </a>
+    <span class="sb-group">Trading</span>
+    <a href="/ai" class={`sb-item ${active==='ai'?'active':''}`}>
+      <span class="sb-icon">◎</span>Quant Desk
+    </a>
+    <a href="/admin/quant" class={`sb-item ${active==='quant'?'active':''}`}>
+      <span class="sb-icon">▣</span>Quant 管理
+    </a>
+  </nav>
+
+  <main id="main"><slot /></main>
+  <div id="toast"></div>
+  <script>
+    let _toastTimer: ReturnType<typeof setTimeout> | null = null;
+    function showToast(msg:string,d=2200){
+      const t=document.getElementById('toast')!;
+      if (_toastTimer !== null) { clearTimeout(_toastTimer); _toastTimer = null; }
+      t.textContent=msg;t.classList.add('show');
+      _toastTimer=setTimeout(()=>{ t.classList.remove('show'); _toastTimer=null; },d);
+    }
+    (window as any).showToast=showToast;
+  </script>
+</body>
+</html>

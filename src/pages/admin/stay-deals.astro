@@ -1,0 +1,305 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { createClient } from '@supabase/supabase-js';
+import { formatEth, formatCheckin, formatNights } from '@/lib/stay-format';
+
+const token = Astro.cookies.get('admin_token')?.value;
+if (token !== import.meta.env.ADMIN_TOKEN) return Astro.redirect('/admin/login?return_to=/admin/stay-deals');
+
+const supabase = createClient(import.meta.env.SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
+
+const STATUSES = ['new', 'qualified', 'seller_contacted', 'negotiating', 'redirected', 'closed', 'lost'] as const;
+const statusLabel: Record<string, string> = {
+  new: '新規相談', qualified: '購入意思確認済', seller_contacted: '販売者連絡済',
+  negotiating: '条件調整中', redirected: 'OpenSea送客済', closed: '成約', lost: '失注',
+};
+const statusBadge: Record<string, string> = {
+  new: 'badge-blue',
+  qualified: 'badge-green',
+  seller_contacted: 'badge-orange',
+  negotiating: 'badge-orange',
+  redirected: 'badge-blue',
+  closed: 'badge-green',
+  lost: 'badge-red',
+};
+const contactLabel: Record<string, string> = {
+  email: 'メール', line: 'LINE', whatsapp: 'WhatsApp', phone: '電話', instagram: 'Instagram', other: 'その他',
+};
+
+const activeStatus = Astro.url.searchParams.get('status') ?? 'all';
+
+let query = supabase.from('stay_deals').select('*').order('created_at', { ascending: false }).limit(200);
+if (activeStatus !== 'all' && (STATUSES as readonly string[]).includes(activeStatus)) {
+  query = query.eq('status', activeStatus);
+}
+const { data: deals } = await query;
+
+// ステータス別件数
+const { data: allForCount } = await supabase.from('stay_deals').select('status');
+const counts: Record<string, number> = { all: (allForCount ?? []).length };
+STATUSES.forEach((s) => { counts[s] = (allForCount ?? []).filter((d: any) => d.status === s).length; });
+
+// 送客クリック件数（token単位の集計・直近参考値）
+const { data: clicks } = await supabase.from('stay_referral_clicks').select('token_id').limit(2000);
+const clickByToken: Record<string, number> = {};
+(clicks ?? []).forEach((c: any) => { if (c.token_id) clickByToken[c.token_id] = (clickByToken[c.token_id] ?? 0) + 1; });
+
+const list = (deals ?? []) as any[];
+---
+
+<AdminLayout title="宿泊券 商談管理" active="stay-deals">
+  <div class="sd-head">
+    <h1 class="pg-title">宿泊券 商談管理</h1>
+    <p class="pg-sub">
+      OpenSea宿泊券(THE KEY)の購入相談・販売者接続・進捗管理。
+      11hotelはNFT・代金を預からず、決済/移転はOpenSea上。紹介料・契約・表示は専門家確認前提。
+    </p>
+  </div>
+
+  <div class="sd-tabs">
+    <a href="/admin/stay-deals" class={`sd-tab ${activeStatus === 'all' ? 'active' : ''}`}>すべて<span>{counts.all}</span></a>
+    {STATUSES.map((s) => (
+      <a href={`/admin/stay-deals?status=${s}`} class={`sd-tab ${activeStatus === s ? 'active' : ''}`}>
+        {statusLabel[s]}<span>{counts[s]}</span>
+      </a>
+    ))}
+  </div>
+
+  {list.length === 0 ? (
+    <div class="sd-empty">該当する商談はありません。</div>
+  ) : (
+    <div class="sd-list card">
+      {list.map((d) => (
+        <details class="deal" data-id={d.id}>
+          <summary class="deal-sum row">
+            <span class={`badge ${statusBadge[d.status] ?? 'badge-gray'}`}>{statusLabel[d.status] ?? d.status}</span>
+            <span class="deal-main row-main">
+              <span class="row-title deal-house">{d.house ?? '—'}</span>
+              <span class="row-sub">#{d.token_id} · {formatEth(d.display_price_eth)}{d.desired_price_eth != null && ` ← 希望 ${formatEth(d.desired_price_eth)}`} · {d.buyer_email ?? '—'}</span>
+            </span>
+            <span class="row-end deal-date">{new Date(d.created_at).toLocaleDateString('ja-JP')}</span>
+            <span class="chevron">›</span>
+          </summary>
+
+          <div class="deal-body">
+            <div class="deal-cols g2">
+              <!-- 購入希望者 -->
+              <section class="deal-sec">
+                <span class="slabel">購入希望者</span>
+                <dl>
+                  <div><dt>名前</dt><dd>{d.buyer_name ?? '—'}</dd></div>
+                  <div><dt>メール</dt><dd>{d.buyer_email ?? '—'}</dd></div>
+                  <div><dt>連絡方法</dt><dd>{contactLabel[d.buyer_contact_method] ?? d.buyer_contact_method ?? '—'}</dd></div>
+                  <div><dt>連絡先</dt><dd>{d.buyer_contact_handle ?? '—'}</dd></div>
+                  <div><dt>Wallet</dt><dd class="mono">{d.buyer_wallet_address ?? '—'}</dd></div>
+                  <div><dt>目的</dt><dd>{d.purpose ?? '—'}</dd></div>
+                  <div><dt>希望価格</dt><dd>{d.desired_price_eth != null ? formatEth(d.desired_price_eth) : '—'}</dd></div>
+                </dl>
+                {d.message && <p class="deal-msg">{d.message}</p>}
+              </section>
+
+              <!-- 対象出品 -->
+              <section class="deal-sec">
+                <span class="slabel">対象出品</span>
+                <dl>
+                  <div><dt>施設</dt><dd>{d.house ?? '—'}</dd></div>
+                  <div><dt>場所</dt><dd>{[d.prefecture, d.place].filter(Boolean).join(' · ') || '—'}</dd></div>
+                  <div><dt>チェックイン</dt><dd>{formatCheckin(d.checkin_date, null)}</dd></div>
+                  <div><dt>泊数</dt><dd>{formatNights(d.nights)}</dd></div>
+                  <div><dt>表示価格</dt><dd>{formatEth(d.display_price_eth)}</dd></div>
+                  <div><dt>order_hash</dt><dd class="mono sm">{d.order_hash ?? '—'}</dd></div>
+                  <div><dt>流入元</dt><dd>{d.source ?? '—'}{d.campaign ? ` / ${d.campaign}` : ''}</dd></div>
+                  <div><dt>送客クリック</dt><dd>{clickByToken[d.token_id] ?? 0} 回</dd></div>
+                </dl>
+                <a class="deal-os" href={`https://opensea.io/collection/the-key-nah`} target="_blank" rel="noopener noreferrer">OpenSeaコレクション ↗</a>
+              </section>
+            </div>
+
+            <!-- 管理フォーム -->
+            <form class="deal-form" data-id={d.id}>
+              <span class="slabel">管理</span>
+              <div class="df-grid">
+                <label><span>ステータス</span>
+                  <select class="input" name="status">
+                    {STATUSES.map((s) => <option value={s} selected={d.status === s}>{statusLabel[s]}</option>)}
+                  </select>
+                </label>
+                <label><span>担当者</span><input class="input" name="assignee" value={d.assignee ?? ''} placeholder="担当者名" /></label>
+                <label><span>販売者名</span><input class="input" name="seller_name" value={d.seller_name ?? ''} placeholder="seller / offerer" /></label>
+                <label><span>販売者連絡先</span><input class="input" name="seller_contact" value={d.seller_contact ?? ''} placeholder="email / handle" /></label>
+                <label><span>成約金額(ETH)</span><input class="input" name="close_amount_eth" type="number" step="0.0001" min="0" value={d.close_amount_eth ?? ''} /></label>
+                <label><span>紹介料（専門家確認前提）</span><input class="input" name="referral_fee" value={d.referral_fee ?? ''} placeholder="例: 5% / 0.1 ETH / 要相談" /></label>
+              </div>
+              <label class="df-full"><span>販売者メモ</span><textarea class="input" name="seller_notes" rows="2" placeholder="接続状況・条件など">{d.seller_notes ?? ''}</textarea></label>
+              <label class="df-full"><span>履歴に追記するメモ（任意）</span><textarea class="input" name="note" rows="2" placeholder="このタイミングの記録を残す"></textarea></label>
+              <div class="df-actions">
+                <button type="submit" class="btn btn-primary df-save">保存する</button>
+                <button type="button" class="btn df-draft" data-id={d.id}>販売者連絡文を作成</button>
+              </div>
+              <div class="df-draft-box" hidden>
+                <textarea class="input df-draft-text" rows="8" readonly></textarea>
+                <button type="button" class="btn btn-sm df-copy">コピー</button>
+              </div>
+            </form>
+
+            <!-- 履歴 -->
+            {Array.isArray(d.history) && d.history.length > 0 && (
+              <div class="deal-hist">
+                <span class="slabel">商談履歴</span>
+                <ul>
+                  {d.history.slice().reverse().map((h: any) => (
+                    <li><span class="hist-at">{h.at ? new Date(h.at).toLocaleString('ja-JP') : ''}</span><span class="hist-note">{h.note ?? h.type}</span></li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </details>
+      ))}
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+document.addEventListener('astro:page-load', () => {
+  // 保存
+  document.querySelectorAll<HTMLFormElement>('.deal-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = form.dataset.id!;
+      const fd = new FormData(form);
+      const save = form.querySelector<HTMLButtonElement>('.df-save');
+      if (save) save.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/stay/deals/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: fd.get('status')?.toString(),
+            assignee: fd.get('assignee')?.toString() ?? null,
+            seller_name: fd.get('seller_name')?.toString() ?? null,
+            seller_contact: fd.get('seller_contact')?.toString() ?? null,
+            seller_notes: fd.get('seller_notes')?.toString() ?? null,
+            close_amount_eth: fd.get('close_amount_eth')?.toString() || null,
+            referral_fee: fd.get('referral_fee')?.toString() ?? null,
+            note: fd.get('note')?.toString() || null,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || '保存に失敗しました');
+        (window as any).showToast?.('保存しました');
+        setTimeout(() => location.reload(), 600);
+      } catch (err: any) {
+        (window as any).showToast?.(err.message || '保存に失敗しました');
+      } finally {
+        if (save) save.disabled = false;
+      }
+    });
+  });
+
+  // 販売者連絡文ドラフト生成
+  document.querySelectorAll<HTMLButtonElement>('.df-draft').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id!;
+      const form = btn.closest('.deal-form')!;
+      const box = form.querySelector<HTMLElement>('.df-draft-box')!;
+      const ta = form.querySelector<HTMLTextAreaElement>('.df-draft-text')!;
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = '作成中…';
+      try {
+        const res = await fetch(`/api/admin/stay/deals/${id}/seller-draft`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || '生成に失敗しました');
+        ta.value = data.draft ?? '';
+        box.hidden = false;
+        (window as any).showToast?.(data.generated_by === 'ai' ? 'AIで下書きを作成しました' : 'テンプレートで下書きを作成しました');
+      } catch (err: any) {
+        (window as any).showToast?.(err.message || '生成に失敗しました');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
+  });
+
+  // コピー
+  document.querySelectorAll<HTMLButtonElement>('.df-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const ta = btn.closest('.df-draft-box')!.querySelector<HTMLTextAreaElement>('.df-draft-text')!;
+      try { await navigator.clipboard.writeText(ta.value); (window as any).showToast?.('コピーしました'); }
+      catch { ta.select(); document.execCommand('copy'); (window as any).showToast?.('コピーしました'); }
+    });
+  });
+});
+</script>
+
+<style>
+  .sd-head { margin-bottom: 22px; }
+  .sd-head .pg-sub { max-width: 720px; line-height: 1.7; margin-top: 6px; }
+
+  .sd-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .sd-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--c-text2); text-decoration: none;
+    padding: 7px 12px; border: 1px solid var(--c-border); border-radius: 6px; background: var(--c-surface);
+    transition: all .12s;
+  }
+  .sd-tab:hover { color: var(--c-text); background: var(--c-surface2); border-color: var(--c-text2); }
+  .sd-tab.active { color: var(--c-text); border-color: var(--c-accent); background: var(--c-surface2); font-weight: 600; }
+  .sd-tab span { font-size: 11px; color: var(--c-text3); background: var(--c-bg); padding: 1px 6px; border-radius: 99px; }
+  .sd-tab.active span { color: var(--c-accent); }
+
+  .sd-empty { color: var(--c-text2); font-size: 13px; padding: 40px 0; text-align: center; }
+
+  .sd-list { display: flex; flex-direction: column; }
+  .deal { background: transparent; }
+  /* border between deals comes from AdminLayout .card>*+* */
+  .deal-sum {
+    list-style: none; cursor: pointer;
+    gap: 12px; align-items: center;
+    padding: 14px 16px; min-height: 56px;
+  }
+  .deal-sum::-webkit-details-marker { display: none; }
+  .deal-sum:hover { background: var(--c-surface2); }
+  .deal[open] > .deal-sum { background: var(--c-surface2); }
+  .deal-main { min-width: 0; }
+  .deal-house { display: block; }
+  .deal-date { color: var(--c-text3); font-size: 11px; white-space: nowrap; }
+  .deal[open] .chevron { transform: rotate(90deg); }
+  .chevron { transition: transform .12s; }
+
+  .deal-body { padding: 0 16px 20px; border-top: 1px solid var(--c-border2); background: var(--c-bg); }
+  .deal-cols { gap: 20px; padding: 8px 0 4px; }
+  .deal-sec .slabel { margin: 16px 0 10px; }
+  .deal-sec dl { display: flex; flex-direction: column; gap: 0; }
+  .deal-sec dl div { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--c-border2); font-size: 12px; }
+  .deal-sec dt { color: var(--c-text3); min-width: 84px; }
+  .deal-sec dd { color: var(--c-text); margin: 0; word-break: break-word; }
+  .mono { font-family: ui-monospace, monospace; font-size: 11px; }
+  .mono.sm { font-size: 10px; }
+  .deal-msg { margin-top: 10px; font-size: 12px; color: var(--c-text2); line-height: 1.7; background: var(--c-surface); border: 1px solid var(--c-border2); padding: 10px 12px; border-radius: 6px; white-space: pre-wrap; }
+  .deal-os { display: inline-block; margin-top: 12px; font-size: 12px; color: var(--c-accent); text-decoration: none; }
+  .deal-os:hover { text-decoration: underline; }
+
+  .deal-form { border-top: 1px solid var(--c-border2); padding-top: 4px; margin-top: 8px; }
+  .deal-form .slabel { margin: 12px 0 10px; }
+  .df-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+  @media (min-width: 560px) { .df-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 900px) { .df-grid { grid-template-columns: 1fr 1fr 1fr; } }
+  .deal-form label { display: flex; flex-direction: column; gap: 5px; }
+  .df-full { display: block; margin-bottom: 12px; }
+  .deal-form label span { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--c-text3); }
+  .deal-form textarea.input { resize: vertical; min-height: 64px; }
+  .df-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .df-draft:disabled { opacity: .6; cursor: wait; }
+  .df-draft-box { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .df-draft-text { width: 100%; line-height: 1.8; }
+
+  .deal-hist { border-top: 1px solid var(--c-border2); padding-top: 4px; margin-top: 12px; }
+  .deal-hist .slabel { margin: 12px 0 8px; }
+  .deal-hist ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .deal-hist li { display: flex; gap: 12px; font-size: 11px; padding: 4px 0; }
+  .hist-at { color: var(--c-text3); min-width: 130px; white-space: nowrap; }
+  .hist-note { color: var(--c-text2); }
+</style>

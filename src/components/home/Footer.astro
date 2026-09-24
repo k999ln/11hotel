@@ -1,0 +1,100 @@
+---
+// フッター: 大きなワードマーク + リンク + メール登録（仮実装）。
+const year = new Date().getFullYear();
+const nav = [
+  ['#hotels', 'Hotels'],
+  ['#destinations', 'Destinations'],
+  ['#stories', 'Stories'],
+  ['#membership', 'Membership'],
+  ['#about', 'About'],
+];
+const social = [
+  ['https://www.instagram.com/kirin.41/', 'Instagram'],
+  // TODO: YouTube チャンネル開設後にリンクを追加する
+];
+---
+
+<footer class="gxft">
+  <div class="gxft-in">
+    <p class="gxft-mark">11hotel</p>
+
+    <div class="gxft-cols">
+      <nav class="gxft-links" aria-label="Footer">
+        {nav.map(([href, label]) => <a href={href}>{label}</a>)}
+        {social.map(([href, label]) => <a href={href} target="_blank" rel="noopener noreferrer">{label} ↗</a>)}
+        <a href="https://www.instagram.com/kirin.41/" target="_blank" rel="noopener noreferrer">Contact ↗</a>
+      </nav>
+
+      <!-- Newsletter signup is a placeholder until an email platform is connected; show a notice on submit. -->
+      <form class="gxft-form" id="gxftForm">
+        <label for="gxftEmail">NEWSLETTER</label>
+        <div class="gxft-form-row">
+          <input id="gxftEmail" type="email" required placeholder="mail@example.com" autocomplete="email" />
+          <button type="submit" class="gx-pill">Sign up</button>
+        </div>
+        <p class="gxft-form-msg" id="gxftMsg" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <div class="gxft-legal">
+      <span>© {year} いいhotel. Operated by @kirin.41</span>
+      <nav class="gxft-legal-links" aria-label="Legal">
+        <a href="/terms">Terms of Service</a>
+        <a href="/privacy">Privacy Policy</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const init = () => {
+    const form = document.getElementById('gxftForm') as HTMLFormElement | null;
+    if (!form || form.dataset.ready === 'true') return;
+    form.dataset.ready = 'true';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      // Placeholder: until the email platform is connected, show a notice only — no data is sent or stored.
+      const msg = document.getElementById('gxftMsg');
+      if (msg) msg.textContent = "The newsletter isn't live yet. In the meantime, follow @kirin.41 on Instagram for updates.";
+    });
+  };
+  init();
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .gxft { background: #080808; border-top: 1px solid var(--gx-line); }
+  .gxft-in { max-width: 1440px; margin: 0 auto; padding: clamp(70px, 10vh, 120px) clamp(20px, 3.4vw, 48px) 40px; }
+  .gxft-mark {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400;
+    font-size: clamp(44px, 8vw, 110px); line-height: 1; letter-spacing: .01em;
+    color: var(--gx-txt); margin: 0 0 clamp(36px, 6vh, 64px);
+  }
+  .gxft-cols { display: grid; gap: 40px; margin-bottom: clamp(46px, 8vh, 80px); }
+  @media (min-width: 860px) { .gxft-cols { grid-template-columns: 1fr minmax(320px, 420px); align-items: start; } }
+
+  .gxft-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 24px; }
+  .gxft-links a { color: var(--gx-sub); text-decoration: none; font-size: 13.5px; padding: 4px 0; transition: color .3s; }
+  .gxft-links a:hover, .gxft-links a:focus-visible { color: var(--gx-txt); }
+
+  .gxft-form label {
+    display: block; font-family: var(--gx-en);
+    font-size: 11px; letter-spacing: .16em; color: var(--gx-sub); margin-bottom: 12px;
+  }
+  .gxft-form-row { display: flex; gap: 10px; }
+  .gxft-form input {
+    flex: 1; min-width: 0; background: transparent; border: 0; border-bottom: 1px solid var(--gx-line);
+    color: var(--gx-txt); font-size: 14px; padding: 12px 2px; outline: none; border-radius: 0;
+  }
+  .gxft-form input:focus { border-bottom-color: rgba(255,255,255,.6); }
+  .gxft-form input::placeholder { color: rgba(255,255,255,.3); }
+  .gxft-form-msg { font-size: 12px; line-height: 1.9; color: var(--gx-sub); margin: 12px 0 0; }
+
+  .gxft-legal {
+    border-top: 1px solid var(--gx-line); padding-top: 24px;
+    display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between;
+    font-size: 11.5px; color: rgba(255,255,255,.4);
+  }
+  .gxft-legal a { color: rgba(255,255,255,.5); text-decoration: none; margin-right: 18px; }
+  .gxft-legal a:hover, .gxft-legal a:focus-visible { color: var(--gx-txt); }
+</style>

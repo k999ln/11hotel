@@ -1,0 +1,145 @@
+---
+// 固定ヘッダー。初期は透明、スクロール後は黒 + blur。
+// モバイルはロゴ・CTA・メニューのみ。メニューはフルスクリーンオーバーレイ。
+const links: Array<[string, string]> = [
+  ['#hotels', 'ON SALE'],
+  ['#destinations', 'DESTINATIONS'],
+  ['#guide', 'HOW TO BUY'],
+  ['#about', 'ABOUT'],
+  ['/vip/keys', 'MY KEYS'],
+];
+---
+
+<header class="gxh" id="gxHeader">
+  <div class="gxh-in">
+    <a class="gxh-logo" href="/"><span class="gxh-logo-ii">いい</span><span class="gxh-logo-en">hotel</span></a>
+    <nav class="gxh-nav" aria-label="Main">
+      {links.map(([href, label]) => <a href={href}>{label}</a>)}
+    </nav>
+    <div class="gxh-right">
+      <a class="gxh-cta" href="#hotels">View listings</a>
+      <button class="gxh-menu" id="gxMenuBtn" type="button" aria-expanded="false" aria-controls="gxMenu" aria-label="Open menu">
+        <i></i><i></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="gxm" id="gxMenu" hidden>
+  <nav aria-label="Menu">
+    {links.map(([href, label]) => <a class="gxm-link" href={href}>{label}</a>)}
+    <a class="gxm-cta" href="#hotels">View listings</a>
+  </nav>
+</div>
+
+<script>
+  const init = () => {
+    const header = document.getElementById('gxHeader');
+    const btn = document.getElementById('gxMenuBtn');
+    const menu = document.getElementById('gxMenu');
+    if (!header || header.dataset.ready === 'true') return;
+    header.dataset.ready = 'true';
+
+    const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    const close = () => {
+      if (!menu || !btn) return;
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+      document.documentElement.style.overflow = '';
+      btn.focus();
+    };
+    btn?.addEventListener('click', () => {
+      if (!menu) return;
+      const open = menu.hidden;
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      document.documentElement.style.overflow = open ? 'hidden' : '';
+      if (open) menu.querySelector<HTMLElement>('a')?.focus();
+    });
+    menu?.addEventListener('click', (e) => {
+      if ((e.target as Element).closest('a')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && menu && !menu.hidden) close();
+    });
+  };
+  init();
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .gxh {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    background: transparent;
+    transition: background .5s ease, backdrop-filter .5s ease;
+  }
+  .gxh.is-scrolled { background: rgba(8,8,8,.82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  .gxh-in {
+    max-width: 1440px; margin: 0 auto; height: 76px;
+    padding: 0 clamp(20px, 3.4vw, 48px);
+    display: flex; align-items: center; gap: clamp(18px, 3vw, 40px);
+  }
+  .gxh-logo {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    text-decoration: none; line-height: 1;
+  }
+  .gxh-logo-ii {
+    font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+    font-size: 19px; font-weight: 400; letter-spacing: .08em; color: var(--gx-txt);
+  }
+  .gxh-logo-en {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 8px; font-weight: 400; letter-spacing: .3em; text-transform: lowercase;
+    color: var(--gx-sub);
+  }
+  .gxh-nav { display: flex; align-items: center; gap: clamp(16px, 2.4vw, 34px); margin-left: auto; }
+  .gxh-nav a {
+    color: var(--gx-sub); text-decoration: none;
+    font-family: var(--gx-en); font-size: 12px; letter-spacing: .14em;
+    padding: 8px 0; transition: color .3s;
+  }
+  .gxh-nav a:hover, .gxh-nav a:focus-visible { color: var(--gx-txt); }
+  .gxh-right { display: flex; align-items: center; gap: 14px; }
+  .gxh-cta {
+    background: #fff; color: #080808; text-decoration: none;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .03em;
+    padding: 12px 20px; border-radius: 999px; white-space: nowrap;
+    transition: opacity .3s;
+  }
+  .gxh-cta:hover, .gxh-cta:focus-visible { opacity: .84; }
+  .gxh-menu {
+    width: 44px; height: 44px; display: grid; place-content: center; gap: 6px;
+    background: transparent; border: 0; cursor: pointer; padding: 0;
+  }
+  .gxh-menu i { display: block; width: 22px; height: 1.5px; background: var(--gx-txt); transition: transform .3s; }
+  .gxh-menu[aria-expanded="true"] i:first-child { transform: translateY(3.75px) rotate(45deg); }
+  .gxh-menu[aria-expanded="true"] i:last-child { transform: translateY(-3.75px) rotate(-45deg); }
+
+  .gxm {
+    position: fixed; inset: 0; z-index: 190; background: rgba(8,8,8,.97);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gxm nav { display: flex; flex-direction: column; gap: 8px; text-align: center; }
+  .gxm-link {
+    color: var(--gx-txt); text-decoration: none;
+    font-family: var(--gx-en); font-weight: 700; font-size: clamp(30px, 8vw, 44px); letter-spacing: .02em;
+    padding: 10px 20px;
+  }
+  .gxm-link:hover, .gxm-link:focus-visible { color: var(--gx-accent); }
+  .gxm-cta {
+    margin: 26px auto 0; background: #fff; color: #080808; text-decoration: none;
+    font-size: 14px; font-weight: 600; padding: 15px 30px; border-radius: 999px;
+  }
+
+  @media (max-width: 860px) {
+    .gxh-in { height: 64px; }
+    .gxh-nav { display: none; }
+    .gxh-right { margin-left: auto; }
+    .gxh-cta { font-size: 11.5px; padding: 11px 16px; }
+  }
+</style>

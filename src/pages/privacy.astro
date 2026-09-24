@@ -1,0 +1,207 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+const updated = '2026-07-30';
+const sections = [
+  {
+    title: 'Basic policy',
+    body: ['11hotel ("this site") appropriately manages the information it collects in operating THE KEY market.'],
+  },
+  {
+    title: 'Information we collect',
+    list: [
+      'Email address and the content of your purchase inquiry (when you submit the purchase-inquiry form)',
+      'Your crypto wallet\'s public address (when you connect a wallet or purchase on-site)',
+      'Usage history such as page views and listing clicks (anonymous ID basis)',
+      'Technical information such as IP address, device information, browser information, and cookies',
+    ],
+  },
+  {
+    title: 'Purpose of use',
+    list: ['Responding to and following up on purchase inquiries', 'Recording on-site purchases and confirming completed sales', 'Improving the service and preventing fraud'],
+  },
+  {
+    title: 'Disclosure to third parties',
+    body: ['We do not disclose personally identifiable information to third parties, except where you have consented, where required by law, or where necessary to the extent entrusted to a service provider.'],
+  },
+  {
+    title: 'External services we use',
+    body: ['We use the following external services to the extent necessary for operation. Each service\'s own privacy policy also applies.'],
+    list: [
+      'Supabase (database)',
+      'Cloudflare (hosting / CDN)',
+      'Google Analytics 4 (traffic analytics)',
+      'OpenSea API (THE KEY listing and ownership lookups)',
+      'Ethereum network / RPC providers (sending and confirming payment transactions)',
+      'Public rate APIs such as Coinbase (ETH/JPY reference rate)',
+      'Anthropic (drafting replies to purchase inquiries; a human always reviews and approves before anything is sent)',
+    ],
+    afterBody: 'To disable Google Analytics data collection, use the <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer">Google Analytics Opt-out Browser Add-on</a>.',
+  },
+  {
+    title: 'Handling of crypto wallets',
+    body: ['On THE KEY-related pages, you can connect a wallet (such as MetaMask) yourself. We handle this as follows.'],
+    list: [
+      'We only ever obtain your <strong>public wallet address</strong>. This site never obtains or stores your private key, seed phrase, or balance information.',
+      'Your address is sent to an external NFT-listing API only to the extent needed to display NFTs you own and to build a purchase transaction.',
+      'We store your address in our database only <strong>when you submit a purchase inquiry</strong> or <strong>when an on-site purchase is recorded</strong> (for responding to inquiries and confirming completed sales).',
+      'Signing and submitting a transaction happens inside your own wallet. When you purchase, the payment contract processes acquisition of the stay key, its transfer to you, and payment of 11hotel\'s handling fee within a single transaction; this site does not continue to hold the funds or the NFT after the transaction completes.',
+      'Transactions on the blockchain are public information that this site cannot delete or alter.',
+    ],
+  },
+  {
+    title: 'Cookies and traffic analytics',
+    body: ['We use cookies for authentication, security, and traffic analytics. If you click an external link, the destination service may set its own cookies.'],
+  },
+  {
+    title: 'Use of AI',
+    body: ['We may use AI to draft replies to purchase inquiries. Any AI-generated draft is used only to assist our judgment, and a human always reviews it before anything is sent externally.'],
+  },
+  {
+    title: 'Disclosure, deletion, and opt-out requests',
+    body: ['To request disclosure, correction, or deletion of personal information we hold, contact us by Instagram DM (<a href="https://www.instagram.com/kirin.41/" target="_blank" rel="noopener noreferrer">@kirin.41</a>). We will verify your identity and respond in accordance with applicable law.'],
+  },
+  {
+    title: 'Changes to this policy',
+    body: ['We revise this policy as our services, the external services we use, and applicable law change. Material changes will be announced on this site.'],
+  },
+];
+---
+
+<BaseLayout
+  title="Privacy Policy"
+  description="11hotel's Privacy Policy — what information we collect, how we use it, wallet handling, third-party disclosure, and cookies."
+>
+<div class="gx legal-doc">
+  <nav class="ld-nav">
+    <a class="ld-logo" href="/"><span class="ld-logo-ii">いい</span><span class="ld-logo-en">hotel</span></a>
+    <a class="ld-back" href="/vip">Back to Market</a>
+  </nav>
+
+  <header class="ld-hero gx-reveal">
+    <p class="gx-label">Privacy Policy</p>
+    <h1 class="ld-title">Privacy Policy</h1>
+    <p class="ld-date">Last updated — {updated}</p>
+  </header>
+
+  <ol class="ld-list">
+    {sections.map((s, i) => (
+      <li class="gx-reveal" data-reveal-delay={String(Math.min(i, 6) * 40)}>
+        <span class="ld-no">{String(i + 1).padStart(2, '0')}</span>
+        <div class="ld-article-body">
+          <h2>{s.title}</h2>
+          {s.body?.map((p) => <p set:html={p} />)}
+          {s.list && (
+            <ul>{s.list.map((li) => <li set:html={li} />)}</ul>
+          )}
+          {s.afterBody && <p set:html={s.afterBody} />}
+        </div>
+      </li>
+    ))}
+  </ol>
+
+  <section class="ld-operator gx-reveal">
+    <p class="gx-label">Operator</p>
+    <dl class="ld-info">
+      <div><dt>Operator</dt><dd>11hotel (independently operated)</dd></div>
+      <div><dt>Address</dt><dd>42 Broadway, Suite 12-534, New York, NY 10004-1617, USA</dd></div>
+      <div><dt>Contact</dt><dd>Instagram DM <a href="https://www.instagram.com/kirin.41/" target="_blank" rel="noopener noreferrer">@kirin.41</a></dd></div>
+    </dl>
+  </section>
+</div>
+</BaseLayout>
+
+<style is:global>
+  html:has(.legal-doc) #hd,
+  html:has(.legal-doc) footer { display: none !important; }
+  body:has(.legal-doc), body:has(.legal-doc) main { background: #080808; }
+  body:has(.legal-doc) main { padding-top: 0; }
+</style>
+
+<script>
+  const initLdReveal = () => {
+    const els = document.querySelectorAll<HTMLElement>('.legal-doc .gx-reveal:not(.is-bound)');
+    if (!els.length) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const el = e.target as HTMLElement;
+        const delay = el.dataset.revealDelay;
+        if (delay) el.style.transitionDelay = `${delay}ms`;
+        el.classList.add('is-in');
+        io.unobserve(el);
+      }
+    }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
+    els.forEach((el) => { el.classList.add('is-bound'); io.observe(el); });
+  };
+  initLdReveal();
+  document.addEventListener('astro:page-load', initLdReveal);
+</script>
+
+<style>
+  .legal-doc {
+    --gx-bg: #080808; --gx-txt: #F5F5F2; --gx-sub: rgba(255,255,255,.62); --gx-line: rgba(255,255,255,.14);
+    --gx-accent: #1473FF;
+    --gx-en: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--gx-bg); color: var(--gx-txt); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Noto Sans JP', sans-serif;
+    min-height: 100vh; padding-bottom: clamp(90px, 14vh, 160px);
+  }
+
+  .ld-nav {
+    position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
+    height: 76px; padding: 0 clamp(20px, 4vw, 48px); border-bottom: 1px solid var(--gx-line);
+    background: rgba(8,8,8,.86); backdrop-filter: blur(16px);
+  }
+  .ld-logo { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; line-height: 1; }
+  .ld-logo-ii { font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', serif; font-size: 19px; font-weight: 400; letter-spacing: .08em; color: var(--gx-txt); }
+  .ld-logo-en { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 8px; font-weight: 400; letter-spacing: .3em; text-transform: lowercase; color: var(--gx-sub); }
+  .ld-back { color: var(--gx-sub); text-decoration: none; font-family: var(--gx-en); font-size: 12px; letter-spacing: .1em; transition: color .3s; }
+  .ld-back:hover, .ld-back:focus-visible { color: var(--gx-txt); }
+
+  .gx-label { font-family: var(--gx-en); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--gx-sub); margin: 0; }
+
+  .ld-hero { max-width: 1200px; margin: 0 auto; padding: clamp(72px, 13vh, 150px) clamp(20px, 3.4vw, 48px) clamp(40px, 6vh, 64px); }
+  .ld-title { font-weight: 700; font-size: clamp(36px, 6vw, 68px); letter-spacing: -.01em; color: var(--gx-txt); margin: 16px 0 18px; text-wrap: balance; }
+  .ld-date { font-family: var(--gx-en); font-size: 12px; letter-spacing: .06em; color: var(--gx-sub); font-variant-numeric: tabular-nums; }
+
+  .ld-list { list-style: none; margin: 0; padding: 0 clamp(20px, 3.4vw, 48px); max-width: 1200px; margin: 0 auto; }
+  .ld-list > li {
+    display: grid; grid-template-columns: 64px 1fr; gap: clamp(18px, 3vw, 40px); align-items: start;
+    border-top: 1px solid var(--gx-line); padding: clamp(28px, 4vh, 44px) 2px;
+    max-width: 760px;
+  }
+  .ld-no { font-family: var(--gx-en); font-weight: 700; font-size: 26px; color: rgba(255,255,255,.28); line-height: 1.4; }
+  .ld-article-body h2 { font-weight: 700; font-size: 17px; color: var(--gx-txt); margin: 0 0 14px; }
+  .ld-article-body p { font-size: 14.5px; line-height: 2; color: var(--gx-sub); margin: 0 0 12px; }
+  .ld-article-body p:last-child { margin-bottom: 0; }
+  .ld-article-body a { color: var(--gx-accent); text-decoration: none; }
+  .ld-article-body a:hover { text-decoration: underline; }
+  .ld-article-body ul { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 9px; }
+  .ld-article-body ul:last-child { margin-bottom: 0; }
+  .ld-article-body li { font-size: 14.5px; line-height: 1.9; color: var(--gx-sub); padding-left: 18px; position: relative; }
+  .ld-article-body li::before { content: '—'; position: absolute; left: 0; color: var(--gx-line); }
+  .ld-article-body strong { color: var(--gx-txt); font-weight: 600; }
+
+  .ld-operator {
+    max-width: 760px; margin: clamp(24px, 4vh, 40px) auto 0; padding: 28px clamp(20px, 3.4vw, 48px);
+    border-top: 1px solid var(--gx-line); border-bottom: 1px solid var(--gx-line);
+  }
+  .ld-info { display: flex; flex-direction: column; gap: 13px; margin-top: 18px; }
+  .ld-info > div { display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 13.5px; line-height: 1.7; }
+  .ld-info dt { color: var(--gx-sub); font-family: var(--gx-en); font-size: 11px; letter-spacing: .06em; margin: 0; padding-top: 1px; }
+  .ld-info dd { color: var(--gx-txt); margin: 0; }
+  .ld-info dd a { color: var(--gx-accent); text-decoration: none; }
+  .ld-info dd a:hover { text-decoration: underline; }
+
+  .gx-reveal {
+    opacity: 0; transform: translateY(26px);
+    transition: opacity .9s cubic-bezier(.22, 1, .36, 1), transform .9s cubic-bezier(.22, 1, .36, 1);
+  }
+  .gx-reveal.is-in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .gx-reveal { opacity: 1; transform: none; transition: none; } }
+
+  @media (max-width: 640px) {
+    .ld-nav { height: 64px; }
+    .ld-list > li { grid-template-columns: 40px 1fr; gap: 14px; }
+    .ld-no { font-size: 19px; }
+  }
+</style>

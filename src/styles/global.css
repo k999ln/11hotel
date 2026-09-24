@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --bg:       #f7f4ef;
+  --bg-2:     #f0ebe3;
+  --ink:      #1c1b18;
+  --ink-2:    #6b6760;
+  --ink-3:    #b5b0a8;
+  --border:   #e2ddd6;
+  --gold:     #8b6914;
+  --white:    #fff;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+/* ── Utilities ── */
+/* Noto Serif JP は削除（重い）。日本語はシステム游明朝/YuMincho にフォールバック */
+.serif { font-family: 'Cormorant Garamond', 'YuMincho', '游明朝', 'Georgia', serif; }
+::selection { background: var(--ink); color: var(--bg); }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }
+
+/* ── Design System: Forms ── */
+
+/* Page wrapper for legal/content pages */
+.page-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 24px 100px;
+}
+
+/* Form group */
+.fld {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.fld label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fld label .req {
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 1px 5px;
+  letter-spacing: .04em;
+}
+
+/* Inputs */
+.inp, .sel, .ta {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  color: var(--ink);
+  outline: none;
+  transition: border-color .15s;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
+  width: 100%;
+}
+.inp:focus, .sel:focus, .ta:focus { border-color: var(--ink); }
+.inp::placeholder, .ta::placeholder { color: var(--ink-3); }
+.ta { resize: vertical; min-height: 96px; }
+
+/* Buttons */
+.btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 13px 24px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  border-radius: 0;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.btn-primary:hover { background: #333; border-color: #333; }
+.btn-primary:disabled { background: var(--ink-3); border-color: var(--ink-3); cursor: not-allowed; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border);
+}
+.btn-outline:hover { border-color: var(--ink); }
+
+.btn-full { width: 100%; }
+
+/* Success / error states */
+.form-success-state {
+  padding: 40px 24px;
+  text-align: center;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.form-success-state .check { font-size: 24px; margin-bottom: 12px; }
+.form-success-state .title { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.form-success-state .sub { font-size: 13px; color: var(--ink-2); line-height: 1.7; }
+
+.form-error-msg {
+  font-size: 13px;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+}

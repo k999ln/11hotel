@@ -1,0 +1,36 @@
+---
+// MEMBERSHIP CTA: 全幅写真の上に白カプセルCTA。
+interface Props { image: string | null }
+const { image } = Astro.props;
+---
+
+<section class="gxmb" id="membership">
+  {image && <img class="gxmb-bg" src={image} alt="" loading="lazy" decoding="async" />}
+  <div class="gxmb-veil" aria-hidden="true"></div>
+  <div class="gxmb-body gx-reveal">
+    <h2>“Your next stay starts here.”</h2>
+    <p>Ask 11hotel before you buy the night you have in mind.<br />Check the KEY you hold, or ask about selling, from MY KEYS.</p>
+    <div class="gxmb-ctas">
+      <a class="gx-pill" href="#hotels">View listings</a>
+      <a class="gx-pill gx-pill--ghost" href="/vip/keys">MY KEYS</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gxmb {
+    position: relative; overflow: hidden;
+    min-height: min(78vh, 680px);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: clamp(80px, 12vh, 140px) clamp(20px, 3.4vw, 48px);
+  }
+  .gxmb-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .gxmb-veil { position: absolute; inset: 0; background: rgba(8,8,8,.62); }
+  .gxmb-body { position: relative; z-index: 1; max-width: 720px; }
+  .gxmb-body h2 {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; font-style: italic;
+    font-size: clamp(34px, 5vw, 72px); line-height: 1.12; color: var(--gx-txt); margin: 0 0 22px;
+  }
+  .gxmb-body p { font-size: 14.5px; line-height: 2.2; color: var(--gx-sub); margin: 0 0 32px; }
+  .gxmb-ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+</style>

@@ -1,0 +1,259 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+const token = Astro.cookies.get('admin_token')?.value;
+if (token !== import.meta.env.ADMIN_TOKEN) return Astro.redirect('/admin/login?return_to=/admin/stay-signals');
+// データはクライアントが /api/admin/stay/signals から取得（サーバー側で OPENSEA_API_KEY 管理）
+---
+
+<AdminLayout title="転売 利益デスク" active="stay-signals">
+  <div class="sg-head">
+    <h1 class="sg-h1">転売 利益デスク <span class="sg-live" id="sgLive">—</span></h1>
+    <p class="sg-sub">
+      出品価格 vs 参照値（フロア/直近成約/前回売買）から、手数料・ガス差引後の<b>期待利益でランク付け</b>。約30秒ごと更新。
+      これは運営者自身の仕入れ判断の材料です（投資助言ではありません／数値は概算・利益や流動性を保証しません）。
+    </p>
+  </div>
+
+  <!-- 前提コントロール -->
+  <div class="sg-controls">
+    <label>参照基準
+      <select id="sgBasis">
+        <option value="median">直近成約の中央値</option>
+        <option value="floor">フロア価格</option>
+        <option value="last">そのトークンの前回売買</option>
+      </select>
+    </label>
+    <label>手数料率 %<input id="sgFee" type="number" step="0.1" min="0" value="2.5" /></label>
+    <label>ガス ETH<input id="sgGas" type="number" step="0.001" min="0" value="0.003" /></label>
+    <button type="button" id="sgReload" class="sg-mini">↻ 再取得</button>
+  </div>
+
+  <!-- サマリ -->
+  <div class="sg-tiles">
+    <div class="sg-tile"><span>フロア</span><strong id="sgFloor">—</strong></div>
+    <div class="sg-tile"><span>直近成約 中央値</span><strong id="sgMedian">—</strong></div>
+    <div class="sg-tile"><span>出品数</span><strong id="sgTotal">—</strong></div>
+    <div class="sg-tile"><span>買い候補（期待利益＞0）</span><strong id="sgBuy" class="pos">—</strong></div>
+    <div class="sg-tile sg-tile--accent"><span>最大 期待利益</span><strong id="sgBest">—</strong></div>
+  </div>
+
+  <div class="sg-state" id="sgLoading">読み込み中…</div>
+  <div class="sg-state sg-err" id="sgError" hidden></div>
+
+  <div class="sg-table-wrap">
+    <table class="sg-table" id="sgTable" hidden>
+      <thead>
+        <tr>
+          <th>#</th><th>宿泊券</th><th class="num">出品</th><th class="num">参照値</th>
+          <th class="num">期待利益</th><th class="num">利益率</th><th>信頼</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="sgBody"></tbody>
+    </table>
+  </div>
+
+  <p class="sg-note" id="sgNote"></p>
+</AdminLayout>
+
+<script>
+document.addEventListener('astro:page-load', () => {
+  const el = (id: string) => document.getElementById(id);
+  const basisSel = el('sgBasis') as HTMLSelectElement;
+  const feeInput = el('sgFee') as HTMLInputElement;
+  const gasInput = el('sgGas') as HTMLInputElement;
+  const body = el('sgBody')!;
+  const table = el('sgTable')!;
+  const loading = el('sgLoading')!;
+  const errBox = el('sgError')!;
+  let data: any = null;
+  let timer = 0;
+
+  const fmt = (n: number | null | undefined, d = 4) => (n === null || n === undefined || !isFinite(n)) ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toString();
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+  function basisValue(row: any): number | null {
+    const b = basisSel.value;
+    if (b === 'floor') return data?.floor ?? null;
+    if (b === 'last') return row.lastSale ?? data?.recentSaleMedian ?? data?.floor ?? null;
+    return data?.recentSaleMedian ?? data?.floor ?? null;
+  }
+  function expected(row: any) {
+    const basis = basisValue(row);
+    const fee = Number(feeInput.value) / 100;
+    const gas = Number(gasInput.value) || 0;
+    if (basis == null || row.price == null) return { basis, profit: null, margin: null };
+    const profit = basis * (1 - (isFinite(fee) ? fee : 0)) - row.price - gas;
+    const margin = row.price ? (profit / row.price) * 100 : null;
+    return { basis, profit, margin };
+  }
+
+  function render() {
+    if (!data || !Array.isArray(data.listings)) return;
+    const rows = data.listings.map((r: any) => ({ r, ...expected(r) }))
+      .sort((a: any, b: any) => (b.profit ?? -Infinity) - (a.profit ?? -Infinity));
+
+    el('sgFloor')!.textContent = data.floor != null ? `${fmt(data.floor)} ETH` : '—';
+    el('sgMedian')!.textContent = data.recentSaleMedian != null ? `${fmt(data.recentSaleMedian)} ETH（${data.recentSaleCount}件）` : '—';
+    el('sgTotal')!.textContent = String(data.listings.length);
+    const buy = rows.filter((x: any) => (x.profit ?? -1) > 0);
+    el('sgBuy')!.textContent = String(buy.length);
+    el('sgBest')!.textContent = rows.length && rows[0].profit != null ? `${fmt(rows[0].profit)} ETH` : '—';
+
+    body.innerHTML = rows.map((x: any, i: number) => {
+      const r = x.r;
+      const pos = x.profit != null && x.profit > 0;
+      const place = [r.prefecture, r.place].filter(Boolean).map(esc).join(' · ');
+      const conf = r.lastSale != null ? '中' : (data.recentSaleMedian != null ? '低' : '—');
+      return `<tr data-token="${esc(r.tokenId)}">
+        <td class="rank">${i + 1}</td>
+        <td class="cell-name">
+          <div class="nm">
+            ${r.keyImageUrl || r.imageUrl ? `<img src="${esc(r.keyImageUrl || r.imageUrl)}" alt="" loading="lazy">` : '<span class="ph"></span>'}
+            <div><b>${esc(r.house)}</b><span>${place} · ${esc(r.checkInLabel)} · #${esc(r.tokenId)}</span></div>
+          </div>
+        </td>
+        <td class="num">${fmt(r.price)}</td>
+        <td class="num">${fmt(x.basis)}</td>
+        <td class="num ${pos ? 'pos' : 'neg'}">${x.profit != null ? (x.profit >= 0 ? '+' : '') + fmt(x.profit) : '—'}</td>
+        <td class="num ${pos ? 'pos' : 'neg'}">${x.margin != null ? (x.margin >= 0 ? '+' : '') + fmt(x.margin, 1) + '%' : '—'}</td>
+        <td><span class="conf conf-${conf}">${conf}</span></td>
+        <td class="ops">
+          <a href="${esc(r.openseaUrl)}" target="_blank" rel="noopener noreferrer">OpenSea↗</a>
+          <button type="button" class="sg-ai" data-token="${esc(r.tokenId)}">AI分析</button>
+          <button type="button" class="sg-add" data-token="${esc(r.tokenId)}">在庫へ</button>
+        </td>
+      </tr>
+      <tr class="ai-row" data-for="${esc(r.tokenId)}" hidden><td colspan="8"><div class="ai-box"></div></td></tr>`;
+    }).join('');
+
+    table.hidden = rows.length === 0;
+    loading.hidden = true;
+    el('sgNote')!.textContent = data.note ?? '';
+    bindOps();
+  }
+
+  function bindOps() {
+    document.querySelectorAll<HTMLButtonElement>('.sg-ai').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const tokenId = btn.dataset.token!;
+        const row = data.listings.find((r: any) => r.tokenId === tokenId);
+        const x = expected(row);
+        const aiRow = document.querySelector(`.ai-row[data-for="${CSS.escape(tokenId)}"]`) as HTMLElement;
+        const box = aiRow?.querySelector('.ai-box') as HTMLElement;
+        if (!aiRow || !box) return;
+        aiRow.hidden = false; box.textContent = '分析中…'; btn.disabled = true;
+        try {
+          const res = await fetch('/api/admin/stay/signals/analyze', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token_id: tokenId, house: row.house, checkin_label: row.checkInLabel, nights: row.nights,
+              price: row.price, floor: data.floor, recent_median: data.recentSaleMedian, last_sale: row.lastSale,
+              fee_pct: Number(feeInput.value), gas: Number(gasInput.value), expected_profit: x.profit,
+            }),
+          });
+          const d = await res.json().catch(() => ({}));
+          box.textContent = d.text || '分析できませんでした';
+        } catch { box.textContent = '分析できませんでした'; }
+        finally { btn.disabled = false; }
+      });
+    });
+    document.querySelectorAll<HTMLButtonElement>('.sg-add').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const tokenId = btn.dataset.token!;
+        const row = data.listings.find((r: any) => r.tokenId === tokenId);
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/admin/stay/inventory/create', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token_id: tokenId, house: row.house, prefecture: row.prefecture, place: row.place,
+              checkin_date: row.checkIn, nights: row.nights, opensea_url: row.openseaUrl,
+              image_url: row.keyImageUrl || row.imageUrl, buy_price_eth: row.price, status: 'candidate',
+            }),
+          });
+          if (!res.ok) throw new Error();
+          (window as any).showToast?.('在庫の候補に追加しました');
+        } catch { (window as any).showToast?.('追加に失敗しました'); }
+        finally { btn.disabled = false; }
+      });
+    });
+  }
+
+  async function load() {
+    try {
+      const res = await fetch('/api/admin/stay/signals', { headers: { accept: 'application/json' } });
+      const json = await res.json();
+      if (!res.ok) {
+        errBox.hidden = false; loading.hidden = true;
+        errBox.textContent = json.setupRequired ? 'OPENSEA_API_KEY が未設定です。設定すると利益デスクが有効になります。' : (json.error || '取得できませんでした');
+        el('sgLive')!.textContent = '';
+        return;
+      }
+      errBox.hidden = true;
+      data = json;
+      el('sgLive')!.textContent = `最終更新 ${new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(json.updatedAt))}`;
+      render();
+    } catch {
+      errBox.hidden = false; loading.hidden = true; errBox.textContent = '取得できませんでした';
+    }
+  }
+
+  [basisSel, feeInput, gasInput].forEach((c) => c.addEventListener('input', () => data && render()));
+  el('sgReload')!.addEventListener('click', load);
+  load();
+  timer = window.setInterval(() => { if (!document.hidden) load(); }, 30000);
+});
+</script>
+
+<style>
+  /* ── 証券チャート風 ── */
+  .sg-head { margin-bottom: 20px; }
+  .sg-h1 { font-size: 20px; font-weight: 700; color: var(--c-text); margin-bottom: 8px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .sg-live { font-size: 11px; font-weight: 500; color: var(--c-green); letter-spacing: .06em; }
+  .sg-sub { font-size: 11px; color: var(--c-text3); line-height: 1.8; max-width: 820px; }
+  .sg-sub b { color: #fbbf24; }
+
+  .sg-controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 18px; padding: 14px 16px; background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.05); border-radius: 6px; }
+  .sg-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--c-text3); }
+  .sg-controls select, .sg-controls input { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--c-text); border-radius: 4px; padding: 8px 11px; font: inherit; font-size: 12px; min-width: 130px; }
+  .sg-controls select:focus, .sg-controls input:focus { border-color: rgba(96,165,250,.3); outline: none; }
+  .sg-mini { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--c-text); border-radius: 4px; padding: 8px 14px; font-size: 11px; cursor: pointer; transition: all .15s; }
+  .sg-mini:hover { background: rgba(255,255,255,.08); }
+
+  /* ── タイル：トレーダーが見る数字 ── */
+  .sg-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+  @media (min-width: 1000px) { .sg-tiles { grid-template-columns: repeat(5, 1fr); gap: 12px; } }
+  .sg-tile { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 7px; }
+  .sg-tile span { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--c-text3); }
+  .sg-tile strong { font-size: 24px; font-weight: 700; color: var(--c-text); font-variant-numeric: tabular-nums; line-height: 1; }
+  .sg-tile--accent { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.2); }
+  .sg-tile--accent strong { color: #4ade80; font-size: 28px; }
+  .pos { color: #10b981 !important; } .neg { color: #ef4444 !important; }
+
+  .sg-state { padding: 40px 20px; text-align: center; color: var(--c-text2); font-size: 13px; }
+  .sg-err { color: #fbbf24; }
+
+  /* ── テーブル：グリッド線＆カラー分離 ── */
+  .sg-table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,.06); border-radius: 6px; }
+  .sg-table { width: 100%; border-collapse: collapse; min-width: 900px; background: rgba(0,0,0,.2); }
+  .sg-table th { text-align: left; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--c-text3); padding: 12px 14px; border-bottom: 2px solid rgba(255,255,255,.1); position: sticky; top: 0; background: rgba(255,255,255,.03); font-weight: 600; }
+  .sg-table th.num, .sg-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, monospace; }
+  .sg-table tr:nth-child(odd) td { background: rgba(255,255,255,.01); }
+  .sg-table tr:hover td { background: rgba(96,165,250,.06); }
+  .sg-table td { padding: 13px 14px; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px; color: var(--c-text); vertical-align: middle; }
+  .rank { color: var(--c-text3); font-weight: 500; font-size: 12px; }
+  .cell-name .nm { display: flex; align-items: center; gap: 11px; }
+  .cell-name img, .cell-name .ph { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; background: rgba(255,255,255,.05); flex-shrink: 0; border: 1px solid rgba(255,255,255,.05); }
+  .cell-name b { display: block; font-size: 12px; color: var(--c-text); font-weight: 600; }
+  .cell-name span { display: block; font-size: 10px; color: var(--c-text3); margin-top: 2px; letter-spacing: .02em; }
+  .conf { font-size: 9px; padding: 3px 7px; border-radius: 3px; background: rgba(255,255,255,.06); color: var(--c-text3); }
+  .conf-中 { background: rgba(96,165,250,.12); color: var(--c-accent); }
+  .ops { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+  .ops a { color: #60a5fa; text-decoration: none; font-size: 11px; font-weight: 500; }
+  .sg-ai, .sg-add { background: rgba(96,165,250,.1); border: 1px solid rgba(96,165,250,.2); color: #60a5fa; border-radius: 4px; padding: 6px 10px; font-size: 10px; cursor: pointer; font-weight: 500; transition: all .12s; }
+  .sg-ai:hover, .sg-add:hover { background: rgba(96,165,250,.15); border-color: rgba(96,165,250,.4); }
+  .sg-ai:disabled, .sg-add:disabled { opacity: .5; cursor: not-allowed; }
+  .ai-box { background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.08); border-radius: 4px; padding: 13px 14px; font-size: 12px; line-height: 1.9; color: var(--c-text2); }
+  .sg-note { margin-top: 16px; font-size: 10px; color: var(--c-text3); line-height: 1.8; letter-spacing: .02em; }
+</style>
