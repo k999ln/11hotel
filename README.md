@@ -63,6 +63,132 @@ Editorial では、建築・空間・食・人物・地域まで取材し、施�
 - OpenSea API（出品情報）
 - viem / WalletConnect（ウォレット接続と購入フロー）
 
+## システム設計
+
+11hotel は、公開ページと API を Astro のサーバーレンダリングアプリとして Cloudflare Workers 上で動かします。出品の最新情報は OpenSea、購入結果は Ethereum、相談・計測・運営記録は Supabase を参照します。運営者向けの AI 操作キューには Cloudflare KV を使い、通知用 Worker と Anthropic API は設定された場合にのみ利用します。
+
+```mermaid
+flowchart LR
+    Visitor["閲覧者・購入者<br/>ブラウザとウォレット"]
+    Admin["運営者"]
+    subgraph Cloudflare["Cloudflare Workers"]
+        App["Astro<br/>ページと API"]
+        KV["KV<br/>AI 操作キュー"]
+        Notify["通知 Worker"]
+    end
+    OpenSea["OpenSea API<br/>出品・NFT 情報"]
+    DB[("Supabase Postgres<br/>相談・計測・在庫")]
+    AI["Anthropic API<br/>任意の分析・下書き"]
+    Slack["Slack<br/>任意の通知先"]
+    subgraph Ethereum["Ethereum mainnet"]
+        Checkout["11hotel Checkout<br/>+ Seaport"]
+    end
+
+    Visitor --> App
+    Admin --> App
+    App -->|出品取得・購入データ準備| OpenSea
+    App -->|サーバー側の記録| DB
+    App -->|操作状態| KV
+    App -->|任意| AI
+    App -->|任意| Notify --> Slack
+    App -->|取引結果の照会| Checkout
+    Visitor -->|本人が署名・送信| Checkout
+```
+
+### 主な処理の流れ
+
+| 処理 | 入力と処理 | 記録・結果 |
+| --- | --- | --- |
+| **出品表示** | `/api/vip/market` と `/api/stays/opensea` が OpenSea の出品・NFT 情報を取得し、画面用に整形する | 短時間キャッシュを使用。取得に失敗した場合は直近の正常データを返せる |
+| **購入** | `/api/vip/fulfill` が現行出品と決済条件を再検証し、コントラクト用の取引データを返す | 購入者のウォレットが署名・送信。`purchase-log` が送信を記録し、`purchase-status` がチェーン上の結果を確認する |
+| **購入相談** | `/api/stays/inquiry` が入力・同意を確認する | `stay_deals` に新規相談を保存し、設定済みなら運営者へ通知する |
+| **運営管理** | `/admin` と `/api/admin/*` が相談・在庫・シグナルを扱う | `stay_deals` と `stay_inventory` を更新する。運営者自身の売買は記録であり、顧客資産の預かりではない |
+
+購入フローでは、出品の表示後に再度サーバー側で出品を検証します。送信後の `stay_deals` はまず `negotiating` として保存され、確認済みのオンチェーン結果に応じて `closed` または `lost` に進みます。ブラウザからの送信記録だけで購入確定にはしません。
+
+```mermaid
+sequenceDiagram
+    participant B as 購入者のブラウザ
+    participant A as 11hotel API
+    participant O as OpenSea
+    participant W as 購入者のウォレット
+    participant E as Ethereum
+    participant D as Supabase
+
+    B->>A: POST /api/vip/fulfill (orderHash, wallet)
+    A->>O: 現行出品と fulfillment data を照会
+    O-->>A: 出品条件と Seaport 取引データ
+    A-->>B: 検証済み checkout calldata と総額
+    B->>W: 宛先・金額を確認して署名
+    W->>E: 取引を送信
+    E-->>B: transaction hash
+    B->>A: POST /api/vip/purchase-log
+    A->>D: stay_deals (negotiating)
+    loop ブラウザ側で最大36回確認
+        B->>A: POST /api/vip/purchase-status
+        A->>E: receipt と Purchased event を照合
+        opt 成功・失敗が確認できた場合
+            A->>D: stay_deals (closed または lost)
+        end
+        A-->>B: pending / confirmed / failed
+    end
+```
+
+### データモデル（ER図）
+
+この図は、このリポジトリのマイグレーションで定義する **THE KEY 関連の3テーブル** を示します。`OPEN_SEA_LISTING` は外部サービス上の概念であり、Supabase 内のテーブルではありません。点線は `token_id` や `order_hash` による論理的な対応で、データベースの外部キー制約ではありません。
+
+```mermaid
+erDiagram
+    OPEN_SEA_LISTING ||..o{ STAY_REFERRAL_CLICKS : "token_id / order_hash"
+    OPEN_SEA_LISTING ||..o{ STAY_DEALS : "token_id / order_hash"
+    OPEN_SEA_LISTING ||..o{ STAY_INVENTORY : "token_id"
+
+    OPEN_SEA_LISTING {
+        string token_id
+        string order_hash
+    }
+    STAY_REFERRAL_CLICKS {
+        uuid id PK
+        string collection_slug
+        string token_id
+        string order_hash "nullable"
+        string source_path
+        timestamp created_at
+    }
+    STAY_DEALS {
+        uuid id PK
+        string token_id
+        string order_hash "nullable"
+        string buyer_email "nullable, private"
+        string buyer_wallet_address "nullable"
+        string status
+        jsonb history
+        numeric close_amount_eth "nullable"
+        timestamp created_at
+    }
+    STAY_INVENTORY {
+        uuid id PK
+        string token_id
+        string status
+        numeric buy_price_eth "nullable"
+        numeric sold_price_eth "nullable"
+        numeric fees_eth
+        timestamp updated_at
+    }
+```
+
+- `stay_referral_clicks` は出品への流入計測、`stay_deals` は購入相談と購入の進捗、`stay_inventory` は運営者自身の仕入れ・出品・売却の記録です。同じ `token_id` に複数の記録があり得ます。
+- これらのテーブルは RLS を有効化し、公開クライアント用ポリシーを付けない設計です。読み書きはサーバー側の service role を使う API と管理画面を経由します。`stay_deals` には連絡先が含まれるため、公開 API の応答に行全体を返しません。
+- 管理ログ用の `admin_audit_logs` もコードから参照しますが、そのテーブル定義はこのリポジトリのマイグレーションに含まれていないため、図には含めていません。`202607300001_drop_legacy_editorial_hospitality.sql` は旧 Editorial / Hospitality テーブルの削除を定義します。図はソース上の目標モデルであり、本番環境への適用状態を保証するものではありません。
+
+### 権限と運用の境界
+
+- 公開の一覧 API は出品を読み取り、購入 API は入力・現行出品・コントラクト宛先と金額を検証します。購入の署名と送信は購入者のウォレットで行います。
+- 管理 API は管理トークンの Cookie を確認し、状態を変えるリクエストでは `Origin` / `Referer` を検証します。AI ブリッジは別の Bearer トークンで保護します。
+- `SUPABASE_SERVICE_ROLE_KEY`、`OPENSEA_API_KEY`、管理トークンなどはサーバー側の設定として扱います。`.env.example` は入力例です。本番のシークレットを Git に追加しないでください。
+- Cloudflare へのデプロイと Supabase のマイグレーション適用は別の作業です。マイグレーションファイルが存在しても、本番データベースに反映済みとは限りません。
+
 ## ローカルで起動
 
 Node.js と npm を用意し、リポジトリのルートで実行します。
